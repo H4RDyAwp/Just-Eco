@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация — Just ID{% endblock %}
+{% block page_title %}Регистрация{% endblock %}
+{% block sub_title %}Создайте аккаунт Just ID{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('register') }}">
+    <div class="form-group">
+        <label for="username">Имя пользователя (логин)</label>
+        <input type="text" id="username" name="username" required autofocus />
+    </div>
+    <div class="form-group">
+        <label for="display_name">Отображаемое имя</label>
+        <input type="text" id="display_name" name="display_name" required />
+    </div>
+    <div class="form-group">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" required />
+    </div>
+    <div class="form-group">
+        <label for="description">Описание (необязательно)</label>
+        <textarea id="description" name="description" rows="3" placeholder="Расскажите о себе..."></textarea>
+    </div>
+    <button type="submit" class="btn-submit">Зарегистрироваться</button>
+</form>
+<div class="auth-links">
+    Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Мой Just ID{% endblock %}
+{% block page_title %}Привет, {{ user.display_name }}!{% endblock %}
+{% block sub_title %}Ваш профиль Just ID{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <div class="user-info">
+        <p><strong>Имя пользователя:</strong> {{ user.username }}</p>
+        <p><strong>Отображаемое имя:</strong> {{ user.display_name }}</p>
+        <p><strong>Описание:</strong> {{ user.description or 'Не указано' }}</p>
+        <p><strong>Баланс:</strong> <span class="balance">${{ "%.2f"|format(user.balance) }}</span></p>
+        <p><strong>Дата регистрации:</strong> {{ user.created_at[:10] }}</p>
+    </div>
+
+    {% if user.is_admin == 1 %}
+    <div
+        style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border);">
+        <h3 style="margin-bottom: 0.5rem;">📊 Статистика</h3>
+        <p><strong>Всего пользователей:</strong> {{ total_users }}</p>
+        <p style="color: #4ade80;">Вы администратор</p>
+    </div>
+    {% else %}
+    <div
+        style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border);">
+        <h3 style="margin-bottom: 0.5rem;">👤 Ваш профиль</h3>
+        <p>Статистика доступна только администраторам.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Кнопка создания поста -->
+<div style="margin-top: 1.5rem;">
+    <a href="{{ url_for('create_post_route') }}" class="btn-submit" style="text-decoration: none;">✏️ Создать пост</a>
+</div>
+
+<!-- Лента постов -->
+<div style="margin-top: 2rem;">
+    <h2 style="margin-bottom: 1rem;">Лента постов</h2>
+    {% if posts %}
+    {% for post in posts %}
+    <div
+        style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.2rem 1.5rem; margin-bottom: 1.2rem; border: 1px solid var(--card-border);">
+        <h3 style="margin-bottom: 0.3rem;">{{ post.title }}</h3>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">
+            {{ post.display_name }} · {{ post.created_at[:16] }}
+        </p>
+        <p>{{ post.content }}</p>
+        {% if post.image_url %}
+        <img src="{{ post.image_url }}" alt="Изображение поста"
+            style="max-width: 100%; border-radius: 1rem; margin-top: 0.5rem; max-height: 300px; object-fit: cover;" />
+        {% endif %}
+        <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% if post.user_id == user.id or user.is_admin == 1 %}
+            <a href="{{ url_for('edit_post', post_id=post.id) }}" class="ctrl-btn"
+                style="width: auto; padding: 0 0.8rem; font-size: 0.7rem;">✏️</a>
+            <form method="POST" action="{{ url_for('delete_post_route', post_id=post.id) }}"
+                style="display: inline-block;" onsubmit="return confirm('Удалить пост?')">
+                <button type="submit" class="ctrl-btn"
+                    style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; background: #ef4444; color: white;">🗑️</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color: var(--text-muted);">Пока нет постов. Создайте первый!</p>
+    {% endif %}
+</div>
+
+<div style="margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+    <a href="{{ url_for('settings') }}" class="btn-submit" style="text-decoration: none;">⚙️ Настройки</a>
+    <a href="{{ url_for('logout') }}" class="btn-submit"
+        style="background: #ef4444; color: white; border: none; text-decoration: none;">🚪 Выйти</a>
+</div>
+{% endblock %}

@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Just ID{% endblock %}</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ============================================================
+                   1.  CSS ПЕРЕМЕННЫЕ (THEMING)
+                   ============================================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-1: #0f0c29;
+            --bg-2: #302b63;
+            --bg-3: #24243e;
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.10);
+            --glass-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
+            --glass-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.55);
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --badge-bg: rgba(255, 255, 255, 0.08);
+            --orb-1: rgba(120, 80, 255, 0.35);
+            --orb-2: rgba(255, 100, 200, 0.25);
+            --orb-3: rgba(0, 200, 255, 0.20);
+            --spotlight-color: rgba(255, 255, 255, 0.05);
+            --btn-bg: rgba(255, 255, 255, 0.08);
+            --btn-border: rgba(255, 255, 255, 0.10);
+            --btn-hover-bg: rgba(255, 255, 255, 0.15);
+        }
+
+        body.light-mode {
+            --bg-1: #e8e6f0;
+            --bg-2: #d9d6e6;
+            --bg-3: #cbc8d9;
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.50);
+            --glass-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.10);
+            --glass-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.60);
+            --text-primary: #1a1a2e;
+            --text-secondary: rgba(30, 30, 50, 0.7);
+            --text-muted: rgba(30, 30, 50, 0.5);
+            --card-bg: rgba(255, 255, 255, 0.30);
+            --card-border: rgba(255, 255, 255, 0.40);
+            --badge-bg: rgba(0, 0, 0, 0.06);
+            --orb-1: rgba(120, 80, 255, 0.20);
+            --orb-2: rgba(255, 100, 200, 0.15);
+            --orb-3: rgba(0, 200, 255, 0.12);
+            --spotlight-color: rgba(255, 255, 255, 0.35);
+            --btn-bg: rgba(0, 0, 0, 0.06);
+            --btn-border: rgba(0, 0, 0, 0.08);
+            --btn-hover-bg: rgba(0, 0, 0, 0.12);
+        }
+
+        body.dart-mode {
+            --bg-1: #0f0c29;
+            --bg-2: #302b63;
+            --bg-3: #24243e;
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.10);
+            --glass-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
+            --glass-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.55);
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --badge-bg: rgba(255, 255, 255, 0.08);
+            --orb-1: rgba(120, 80, 255, 0.35);
+            --orb-2: rgba(255, 100, 200, 0.25);
+            --orb-3: rgba(0, 200, 255, 0.20);
+            --spotlight-color: rgba(255, 255, 255, 0.05);
+            --btn-bg: rgba(255, 255, 255, 0.08);
+            --btn-border: rgba(255, 255, 255, 0.10);
+            --btn-hover-bg: rgba(255, 255, 255, 0.15);
+        }
+
+        body.dark-mode {
+            --bg-1: #0a0a0a;
+            --bg-2: #111111;
+            --bg-3: #1a1a1a;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.9);
+            --glass-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+            --text-primary: #f0f0f0;
+            --text-secondary: rgba(255, 255, 255, 0.45);
+            --text-muted: rgba(255, 255, 255, 0.25);
+            --card-bg: rgba(255, 255, 255, 0.02);
+            --card-border: rgba(255, 255, 255, 0.04);
+            --badge-bg: rgba(255, 255, 255, 0.04);
+            --orb-1: rgba(60, 60, 80, 0.25);
+            --orb-2: rgba(80, 60, 100, 0.15);
+            --orb-3: rgba(40, 80, 120, 0.12);
+            --spotlight-color: rgba(255, 255, 255, 0.02);
+            --btn-bg: rgba(255, 255, 255, 0.04);
+            --btn-border: rgba(255, 255, 255, 0.06);
+            --btn-hover-bg: rgba(255, 255, 255, 0.08);
+        }
+
+        /* ============================================================
+                   2.  ЦВЕТОВЫЕ ПРЕСЕТЫ (орбы)
+                   ============================================================ */
+        body.theme-cool {
+            --orb-1: rgba(120, 80, 255, 0.35);
+            --orb-2: rgba(0, 200, 255, 0.25);
+            --orb-3: rgba(100, 100, 255, 0.20);
+        }
+
+        body.theme-warm {
+            --orb-1: rgba(255, 120, 50, 0.35);
+            --orb-2: rgba(255, 80, 80, 0.25);
+            --orb-3: rgba(255, 200, 50, 0.20);
+        }
+
+        body.theme-neon {
+            --orb-1: rgba(0, 255, 200, 0.30);
+            --orb-2: rgba(255, 0, 200, 0.25);
+            --orb-3: rgba(0, 200, 255, 0.25);
+        }
+
+        /* ============================================================
+                   3.  БАЗОВЫЕ СТИЛИ
+                   ============================================================ */
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-1);
+            padding: 1.5rem;
+            transition: background 0.6s ease, color 0.4s ease;
+            perspective: 1200px;
+            cursor: default;
+            /* overflow: hidden;  удалили, чтобы скроллинг работал */
+        }
+
+        body.no-scroll {
+            overflow: hidden;
+        }
+
+        #spotlight {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%),
+                    var(--spotlight-color) 0%,
+                    transparent 60%);
+            opacity: 0.9;
+            transition: background 0.3s ease;
+            will-change: background;
+        }
+
+        /* ============================================================
+                   4.  ФОН И ОРБЫ
+                   ============================================================ */
+        .bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: radial-gradient(ellipse at 20% 50%, var(--bg-1), var(--bg-2), var(--bg-3));
+            overflow: hidden;
+            transition: background 0.8s ease;
+        }
+
+        .bg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 70% 30%, var(--orb-1) 0%, transparent 60%),
+                radial-gradient(circle at 20% 80%, var(--orb-2) 0%, transparent 55%),
+                radial-gradient(circle at 80% 70%, var(--orb-3) 0%, transparent 50%);
+            animation: bgShift 18s ease-in-out infinite alternate;
+            transition: background 0.8s ease;
+            transform: scale(1.8);
+        }
+
+        @keyframes bgShift {
+            0% {
+                transform: scale(1.8) rotate(0deg);
+                opacity: 0.7;
+            }
+
+            50% {
+                transform: scale(2.0) rotate(3deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.6) rotate(-2deg);
+                opacity: 0.8;
+            }
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.6;
+            animation: orbFloat 16s ease-in-out infinite alternate;
+            transition: background 0.8s ease;
+        }
+
+        .orb--1 {
+            width: 800px;
+            height: 800px;
+            top: -20%;
+            left: -20%;
+            background: radial-gradient(circle, var(--orb-1), transparent);
+            animation-duration: 20s;
+        }
+
+        .orb--2 {
+            width: 700px;
+            height: 700px;
+            bottom: -25%;
+            right: -25%;
+            background: radial-gradient(circle, var(--orb-2), transparent);
+            animation-duration: 22s;
+            animation-delay: -4s;
+        }
+
+        .orb--3 {
+            width: 600px;
+            height: 600px;
+            top: 30%;
+            left: 30%;
+            background: radial-gradient(circle, var(--orb-3), transparent);
+            animation-duration: 18s;
+            animation-delay: -8s;
+            opacity: 0.4;
+        }
+
+        @keyframes orbFloat {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(60px, -50px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-40px, 60px) scale(0.9);
+            }
+
+            100% {
+                transform: translate(30px, -20px) scale(1.05);
+            }
+        }
+
+        /* ============================================================
+                   5.  СТЕКЛЯННАЯ КАРТОЧКА
+                   ============================================================ */
+        .glass {
+            position: relative;
+            z-index: 1;
+            max-width: 860px;
+            width: 100%;
+            padding: 2.5rem 3rem;
+            border-radius: 3rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(1.8);
+            -webkit-backdrop-filter: blur(24px) saturate(1.8);
+            border: 1px solid var(--glass-border);
+            box-shadow:
+                var(--glass-shadow),
+                var(--glass-inset),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+            transition: box-shadow 0.4s ease, border-color 0.4s ease, background 0.5s ease;
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+
+        .glass:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow:
+                0 40px 80px -20px rgba(0, 0, 0, 0.7),
+                var(--glass-inset),
+                inset 0 1px 0 rgba(255, 255, 255, 0.20);
+        }
+
+        .glass::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 3rem;
+            padding: 1px;
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.30) 0%,
+                    rgba(255, 255, 255, 0.05) 40%,
+                    rgba(255, 255, 255, 0) 60%,
+                    rgba(255, 255, 255, 0.12) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0.7;
+            transition: opacity 0.5s ease;
+        }
+
+        .glass:hover::before {
+            opacity: 1;
+        }
+
+        .glass::after {
+            content: '';
+            position: absolute;
+            top: 6%;
+            left: 8%;
+            width: 55%;
+            height: 30%;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center,
+                    rgba(255, 255, 255, 0.10) 0%,
+                    transparent 70%);
+            pointer-events: none;
+            filter: blur(10px);
+            opacity: 0.8;
+            transition: opacity 0.6s ease;
+        }
+
+        .glass .gloss-bottom {
+            position: absolute;
+            bottom: 6%;
+            right: 8%;
+            width: 40%;
+            height: 20%;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center,
+                    rgba(255, 255, 255, 0.06) 0%,
+                    transparent 70%);
+            pointer-events: none;
+            filter: blur(8px);
+            opacity: 0.6;
+            transition: opacity 0.6s ease;
+            z-index: 1;
+        }
+
+        .glass:hover .gloss-bottom {
+            opacity: 0.9;
+        }
+
+        /* ============================================================
+                   6.  КОНТЕНТ
+                   ============================================================ */
+        .content {
+            position: relative;
+            z-index: 2;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            transition: color 0.4s ease;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem 0.4rem 0.8rem;
+            border-radius: 100px;
+            background: var(--badge-bg);
+            border: 1px solid var(--glass-border);
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            color: var(--text-secondary);
+            backdrop-filter: blur(8px);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            display: inline-block;
+            animation: pulseDot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseDot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+        }
+
+        .title-group h1 {
+            font-size: clamp(2.2rem, 6vw, 4rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            background: linear-gradient(135deg,
+                    var(--text-primary) 0%,
+                    var(--text-secondary) 30%,
+                    var(--text-primary) 60%,
+                    var(--text-secondary) 100%);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 6s ease-in-out infinite alternate;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .title-group .sub {
+            font-size: 1.05rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+            letter-spacing: 0.01em;
+        }
+
+        /* ===== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ ФОРМ И НАВИГАЦИИ ===== */
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border 0.25s;
+            backdrop-filter: blur(4px);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--text-secondary);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn-submit {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.7rem 2rem;
+            border-radius: 100px;
+            background: var(--text-primary);
+            color: var(--bg-1);
+            border: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            text-decoration: none;
+        }
+
+        .btn-submit:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        body.light-mode .btn-submit {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .flash-messages {
+            margin-bottom: 1rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid;
+        }
+
+        .flash-messages.error {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .flash-messages.success {
+            border-color: #4ade80;
+            color: #4ade80;
+        }
+
+        .flash-messages.info {
+            border-color: #60a5fa;
+            color: #60a5fa;
+        }
+
+        .auth-links {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .auth-links a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+
+        .balance {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #4ade80;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .footer {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--glass-border);
+            transition: border-color 0.3s;
+        }
+
+        .footer-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer .meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .ctrl-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--btn-bg);
+            border: 1px solid var(--btn-border);
+            color: var(--text-secondary);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            font-family: inherit;
+        }
+
+        .ctrl-btn:hover {
+            background: var(--btn-hover-bg);
+            transform: scale(1.08);
+            border-color: var(--text-secondary);
+        }
+
+        .ctrl-btn.active {
+            background: var(--text-primary);
+            color: var(--bg-1);
+            border-color: var(--text-primary);
+        }
+
+        body.light-mode .ctrl-btn.active {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .ctrl-btn.theme-btn {
+            width: auto;
+            padding: 0 0.8rem;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            gap: 0.3rem;
+        }
+
+        /* Навигация в хедере */
+        .nav-links {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        /* Стили для постов */
+        .post-card {
+            background: var(--card-bg);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: all 0.25s ease;
+        }
+
+        .post-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--text-secondary);
+        }
+
+        /* Слайдер 3D множителя */
+        .slider-wrap {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+            padding: 0.25rem 0;
+        }
+
+        .slider-wrap label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .slider-wrap input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--glass-border);
+            outline: none;
+            transition: background 0.3s;
+            cursor: pointer;
+        }
+
+        .slider-wrap input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            border: 2px solid var(--glass-bg);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: 0.15s;
+            cursor: pointer;
+        }
+
+        .slider-wrap input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        .slider-wrap input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            border: 2px solid var(--glass-bg);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+
+        .slider-value {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 2.5rem;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ============================================================
+                   7.  АДАПТИВНОСТЬ
+                   ============================================================ */
+        @media (max-width: 600px) {
+            .glass {
+                padding: 1.75rem 1.5rem;
+                border-radius: 2rem;
+            }
+
+            .glass::before {
+                border-radius: 2rem;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .nav-links {
+                margin-left: 0;
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .footer-top {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls {
+                justify-content: flex-start;
+            }
+
+            .slider-wrap {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .glass {
+                padding: 1.25rem 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Подсветка, следующая за курсором -->
+    <div id="spotlight"></div>
+
+    <!-- Фоновые орбы -->
+    <div class="bg">
+        <div class="orb orb--1"></div>
+        <div class="orb orb--2"></div>
+        <div class="orb orb--3"></div>
+    </div>
+
+    <!-- Основная стеклянная карточка -->
+    <div class="glass" id="glass">
+        <div class="gloss-bottom"></div>
+        <div class="content">
+            <!-- Шапка с заголовком, бейджем и навигацией -->
+            <div class="header">
+                <div class="title-group">
+                    <h1>{% block page_title %}Just ID{% endblock %}</h1>
+                    <div class="sub">{% block sub_title %}Made · by · h4rdy.dev{% endblock %}</div>
+                </div>
+                <div class="badge">
+                    <span class="dot"></span>
+                    {% block badge %}V 1.1{% endblock %}
+                </div>
+                <!-- Навигация -->
+                <div class="nav-links">
+                    <a href="{{ url_for('dashboard') }}">Дашборд</a>
+                    <a href="{{ url_for('feed') }}">Лента</a>
+                    <a href="{{ url_for('create_post_route') }}">Новый пост</a>
+                    <a href="{{ url_for('settings') }}">Настройки</a>
+                    {% if current_user and current_user.is_admin == 1 %}
+                    <a href="{{ url_for('admin_panel') }}">Админка</a>
+                    <a href="{{ url_for('admin_posts') }}">Упр. постами</a>
+                    {% endif %}
+                    {% if session.user_id %}
+                    <a href="{{ url_for('logout') }}">Выйти</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Flash-сообщения -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-messages {{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- ОСНОВНОЙ КОНТЕНТ (подставляется из дочерних шаблонов) -->
+            {% block content %}{% endblock %}
+
+            <!-- Футер -->
+            <div class="footer" style="margin-top: 1.5rem;">
+                <div class="footer-top">
+                    <span class="meta">✦ 2026 · Just ID</span>
+                    <div class="controls">
+                        <button class="ctrl-btn theme-btn" data-theme="light" title="Светлая">☀️ Light</button>
+                        <button class="ctrl-btn theme-btn active" data-theme="dart" title="Dart">🌙 Dart</button>
+                        <button class="ctrl-btn theme-btn" data-theme="dark" title="Тёмная">🌑 Dark</button>
+                        <span style="opacity:0.2; margin: 0 0.2rem;">|</span>
+                        <button class="ctrl-btn active" data-preset="cool" title="Холодный">❄️</button>
+                        <button class="ctrl-btn" data-preset="warm" title="Тёплый">🔥</button>
+                        <button class="ctrl-btn" data-preset="neon" title="Неоновый">💜</button>
+                    </div>
+                </div>
+                <!-- Слайдер 3D множителя -->
+                <div class="slider-wrap">
+                    <label for="tiltMultiplier">3D tilt</label>
+                    <input type="range" id="tiltMultiplier" min="0" max="2" step="0.01" value="1" />
+                    <span class="slider-value" id="tiltValue">1.00×</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+    JAVASCRIPT (3D-наклон, spotlight, темы, пресеты, слайдер)
+    ============================================================ -->
+    <script>
+        (function () {
+            'use strict';
+
+            // --- Элементы ---
+            const glass = document.getElementById('glass');
+            const spotlight = document.getElementById('spotlight');
+            const body = document.body;
+
+            // --- Слайдер 3D множителя ---
+            const slider = document.getElementById('tiltMultiplier');
+            const tiltDisplay = document.getElementById('tiltValue');
+
+            // Получаем начальное значение из пользователя (или 0.30 по умолчанию)
+            let tiltMultiplier = 0.30;
+            {% if current_user %}
+            tiltMultiplier = {{ current_user.tilt_multiplier }};
+        {% endif %}
+        // Ограничиваем допустимым диапазоном
+        tiltMultiplier = Math.min(2, Math.max(0, tiltMultiplier));
+        if (slider) {
+            slider.value = tiltMultiplier;
+            tiltDisplay.textContent = tiltMultiplier.toFixed(2) + '×';
+        }
+
+        // Обновление при изменении слайдера (только для текущей сессии, не сохраняется в БД)
+        if (slider) {
+            slider.addEventListener('input', () => {
+                tiltMultiplier = parseFloat(slider.value);
+                tiltDisplay.textContent = tiltMultiplier.toFixed(2) + '×';
+            });
+        }
+
+        // --- Плавный 3D-наклон с множителем (LERP) ---
+        let targetX = 0, targetY = 0;
+        let currentX = 0, currentY = 0;
+        const BASE_MAX_ANGLE = 8; // градусы
+
+        glass.addEventListener('mousemove', (e) => {
+            const rect = glass.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const maxAngle = BASE_MAX_ANGLE * tiltMultiplier;
+            targetX = ((y - centerY) / centerY) * -maxAngle;
+            targetY = ((x - centerX) / centerX) * maxAngle;
+        });
+
+        glass.addEventListener('mouseleave', () => {
+            targetX = 0;
+            targetY = 0;
+        });
+
+        function animateTilt() {
+            currentX += (targetX - currentX) * 0.08;
+            currentY += (targetY - currentY) * 0.08;
+            glass.style.transform =
+                `rotateX(${currentX}deg) rotateY(${currentY}deg) scale(1.01)`;
+            requestAnimationFrame(animateTilt);
+        }
+        animateTilt();
+
+        // --- Spotlight (подсветка от мыши) ---
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth) * 100;
+            const y = (e.clientY / window.innerHeight) * 100;
+            spotlight.style.setProperty('--mx', x + '%');
+            spotlight.style.setProperty('--my', y + '%');
+        });
+
+        // --- Переключение тем (Light / Dart / Dark) ---
+        const themeBtns = document.querySelectorAll('[data-theme]');
+
+        function setTheme(theme) {
+            body.classList.remove('light-mode', 'dart-mode', 'dark-mode');
+            if (theme === 'light') body.classList.add('light-mode');
+            else if (theme === 'dart') body.classList.add('dart-mode');
+            else if (theme === 'dark') body.classList.add('dark-mode');
+
+            themeBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.theme === theme);
+            });
+            localStorage.setItem('glass-theme', theme);
+        }
+
+        const savedTheme = localStorage.getItem('glass-theme') || 'dart';
+        setTheme(savedTheme);
+
+        themeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                setTheme(btn.dataset.theme);
+            });
+        });
+
+        // --- Цветовые пресеты (орбы) ---
+        const presetBtns = document.querySelectorAll('[data-preset]');
+
+        function setPreset(preset) {
+            body.classList.remove('theme-cool', 'theme-warm', 'theme-neon');
+            if (preset !== 'cool') {
+                body.classList.add('theme-' + preset);
+            }
+            presetBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.preset === preset);
+            });
+            localStorage.setItem('glass-preset', preset);
+        }
+
+        const savedPreset = localStorage.getItem('glass-preset') || 'cool';
+        setPreset(savedPreset);
+
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                setPreset(btn.dataset.preset);
+            });
+        });
+
+        // --- Сброс наклона при уходе мыши с окна ---
+        document.addEventListener('mouseleave', () => {
+            targetX = 0;
+            targetY = 0;
+        });
+
+            // --- Блокировка скролла при открытии модальных окон ---
+            // (обрабатывается в settings.html, но можно оставить на будущее)
+
+        }) ();
+    </script>
+
+</body>
+
+</html>

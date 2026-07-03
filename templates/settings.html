@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки — Just ID{% endblock %}
+{% block page_title %}Настройки профиля{% endblock %}
+{% block sub_title %}Измените свои данные{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('settings') }}">
+    <div class="form-group">
+        <label for="display_name">Отображаемое имя</label>
+        <input type="text" id="display_name" name="display_name" value="{{ user.display_name }}" required />
+    </div>
+    <div class="form-group">
+        <label for="description">Описание</label>
+        <textarea id="description" name="description" rows="3">{{ user.description or '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="new_password">Новый пароль (оставьте пустым, чтобы не менять)</label>
+        <input type="password" id="new_password" name="new_password" />
+    </div>
+    <div class="form-group">
+        <label for="confirm_password">Подтвердите новый пароль</label>
+        <input type="password" id="confirm_password" name="confirm_password" />
+    </div>
+
+    <!-- НОВОЕ: настройка 3D-эффекта -->
+    <div class="form-group">
+        <label for="tilt_multiplier">Сила 3D-эффекта (0.00 – 2.00)</label>
+        <input type="number" id="tilt_multiplier" name="tilt_multiplier" step="0.01" min="0" max="2" value="{{ "
+            %.2f"|format(user.tilt_multiplier) }}" style="width: 100%;" />
+        <small style="color: var(--text-muted); display: block; margin-top: 0.3rem;">
+            Значение 0 отключает наклон, 1 – стандартная сила, 2 – максимальная.
+        </small>
+    </div>
+
+    <button type="submit" class="btn-submit">Сохранить изменения</button>
+</form>
+
+<!-- ОПАСНАЯ ЗОНА (без изменений) -->
+<hr style="border-color: var(--glass-border); margin: 2rem 0 1rem;" />
+<h3 style="color: #ef4444; margin-bottom: 0.5rem;">⚠️ Опасная зона</h3>
+<p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+    Удаление аккаунта — необратимое действие.
+</p>
+<button id="deleteAccountBtn" class="btn-submit" style="background: #ef4444; color: white; border: none;">
+    🗑️ Удалить аккаунт
+</button>
+
+<!-- Модальное окно (как было) -->
+<div id="deleteModal" class="modal-overlay">
+    <div class="modal-window glass">
+        <h2 style="margin-bottom: 1rem;">Удаление аккаунта</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.2rem;">
+            Для подтверждения введите свои имя пользователя и пароль.
+        </p>
+        <form method="POST" action="{{ url_for('settings') }}" id="deleteForm">
+            <input type="hidden" name="delete_account" value="1" />
+            <div class="form-group">
+                <label for="modal_username">Имя пользователя</label>
+                <input type="text" id="modal_username" name="username" placeholder="Введите ваше имя" required />
+            </div>
+            <div class="form-group">
+                <label for="modal_password">Пароль</label>
+                <input type="password" id="modal_password" name="password" placeholder="Введите пароль" required />
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                <button type="button" id="cancelDeleteBtn" class="ctrl-btn theme-btn"
+                    style="background: var(--btn-bg); color: var(--text-secondary);">
+                    Отмена
+                </button>
+                <button type="submit" class="btn-submit" style="background: #ef4444; color: white; border: none;">
+                    Удалить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="auth-links">
+    <a href="{{ url_for('dashboard') }}">← Вернуться в дашборд</a>
+</div>
+
+<style>
+    /* Стили для модального окна (те же) */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        opacity: 0;
+        transition: opacity 0.35s ease;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .modal-window {
+        max-width: 420px;
+        width: 100%;
+        padding: 2rem 2rem 1.8rem;
+        border-radius: 2rem;
+        background: var(--glass-bg);
+        backdrop-filter: blur(24px) saturate(1.8);
+        -webkit-backdrop-filter: blur(24px) saturate(1.8);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-shadow), var(--glass-inset);
+        color: var(--text-primary);
+        transform: scale(0.9);
+        opacity: 0;
+        transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+    }
+
+    .modal-overlay.active .modal-window {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    @media (max-width: 480px) {
+        .modal-window {
+            padding: 1.5rem 1.2rem;
+            border-radius: 1.5rem;
+        }
+    }
+</style>
+
+<script>
+    (function () {
+        'use strict';
+        const modal = document.getElementById('deleteModal');
+        const openBtn = document.getElementById('deleteAccountBtn');
+        const cancelBtn = document.getElementById('cancelDeleteBtn');
+        const form = document.getElementById('deleteForm');
+        const body = document.body;
+
+        function openModal() {
+            modal.style.display = 'flex';
+            body.classList.add('no-scroll');
+            requestAnimationFrame(() => {
+                modal.classList.add('active');
+            });
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            body.classList.remove('no-scroll');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 350);
+            form.reset();
+        }
+
+        openBtn.addEventListener('click', openModal);
+        cancelBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+        });
+    })();
+</script>
+{% endblock %}

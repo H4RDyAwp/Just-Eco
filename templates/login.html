@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Вход — Just ID{% endblock %}
+{% block page_title %}Вход в Just ID{% endblock %}
+{% block sub_title %}Войдите в свой аккаунт{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('login') }}">
+    <div class="form-group">
+        <label for="username">Имя пользователя</label>
+        <input type="text" id="username" name="username" required autofocus />
+    </div>
+    <div class="form-group">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" required />
+    </div>
+    <button type="submit" class="btn-submit">Войти</button>
+</form>
+<div class="auth-links">
+    Нет аккаунта? <a href="{{ url_for('register') }}">Зарегистрироваться</a>
+</div>
+{% endblock %}

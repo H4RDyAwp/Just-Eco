@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Создать пост — Just ID{% endblock %}
+{% block page_title %}Новый пост{% endblock %}
+{% block sub_title %}Поделитесь мыслями{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('create_post_route') }}">
+    <div class="form-group">
+        <label for="title">Заголовок</label>
+        <input type="text" id="title" name="title" required autofocus />
+    </div>
+    <div class="form-group">
+        <label for="content">Текст</label>
+        <textarea id="content" name="content" rows="5" required></textarea>
+    </div>
+    <div class="form-group">
+        <label for="image_url">Ссылка на изображение (необязательно)</label>
+        <input type="url" id="image_url" name="image_url" placeholder="https://example.com/image.jpg" />
+    </div>
+    <button type="submit" class="btn-submit">Опубликовать</button>
+</form>
+<div class="auth-links">
+    <a href="{{ url_for('dashboard') }}">← На дашборд</a>
+</div>
+{% endblock %}

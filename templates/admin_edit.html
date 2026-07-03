@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование пользователя{% endblock %}
+{% block page_title %}Редактировать {{ user.username }}{% endblock %}
+{% block sub_title %}Измените данные пользователя{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('admin_edit_user', user_id=user.id) }}">
+    <div class="form-group">
+        <label for="display_name">Отображаемое имя</label>
+        <input type="text" id="display_name" name="display_name" value="{{ user.display_name }}" required />
+    </div>
+    <div class="form-group">
+        <label for="description">Описание</label>
+        <textarea id="description" name="description" rows="3">{{ user.description or '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="balance">Баланс (в долларах)</label>
+        <input type="text" id="balance" name="balance" value="{{ " %.2f"|format(user.balance) }}" />
+    </div>
+    <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+        <input type="checkbox" id="is_admin" name="is_admin" {% if user.is_admin==1 %}checked{% endif %} />
+        <label for="is_admin" style="margin: 0;">Администратор</label>
+    </div>
+    <button type="submit" class="btn-submit">Сохранить изменения</button>
+</form>
+<div class="auth-links">
+    <a href="{{ url_for('admin_panel') }}">← Вернуться к списку пользователей</a>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-панель{% endblock %}
+{% block page_title %}Управление пользователями{% endblock %}
+{% block sub_title %}Все аккаунты Just ID{% endblock %}
+
+{% block content %}
+<div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--glass-border);">
+                <th style="padding: 0.5rem 0.5rem; text-align: left;">ID</th>
+                <th style="padding: 0.5rem 0.5rem; text-align: left;">Логин</th>
+                <th style="padding: 0.5rem 0.5rem; text-align: left;">Имя</th>
+                <th style="padding: 0.5rem 0.5rem; text-align: left;">Описание</th>
+                <th style="padding: 0.5rem 0.5rem; text-align: left;">Баланс</th>
+                <th style="padding: 0.5rem 0.5rem; text-align: left;">Админ</th>
+                <th style="padding: 0.5rem 0.5rem; text-align: center;">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr style="border-bottom: 1px solid var(--glass-border);">
+                <td style="padding: 0.5rem;">{{ u.id }}</td>
+                <td style="padding: 0.5rem;">{{ u.username }}</td>
+                <td style="padding: 0.5rem;">{{ u.display_name }}</td>
+                <td style="padding: 0.5rem;">{{ u.description or '—' }}</td>
+                <td style="padding: 0.5rem;">${{ "%.2f"|format(u.balance) }}</td>
+                <td style="padding: 0.5rem;">{% if u.is_admin == 1 %}✅{% else %}❌{% endif %}</td>
+                <td style="padding: 0.5rem; text-align: center;">
+                    <a href="{{ url_for('admin_edit_user', user_id=u.id) }}" class="ctrl-btn"
+                        style="width: auto; padding: 0 0.8rem; font-size: 0.7rem;">✏️</a>
+                    <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                        style="display: inline-block;" onsubmit="return confirm('Удалить пользователя?')">
+                        <button type="submit" class="ctrl-btn"
+                            style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; background: #ef4444; color: white;">🗑️</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div style="margin-top: 1.5rem;">
+    <a href="{{ url_for('dashboard') }}" class="btn-submit" style="text-decoration: none;">← На дашборд</a>
+</div>
+{% endblock %}
