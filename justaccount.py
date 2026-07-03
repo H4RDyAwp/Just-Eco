@@ -16,14 +16,21 @@ app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
 
 # ---------- ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ ----------
 def get_db_connection():
-    """Возвращает соединение с PostgreSQL и курсор в формате RealDictCursor."""
-    conn = psycopg2.connect(
-        dbname=os.getenv('DB_NAME', 'justid'),
-        user=os.getenv('DB_USER', 'postgres'),
-        password=os.getenv('DB_PASSWORD', 'postgres'),
-        host=os.getenv('DB_HOST', 'localhost'),
-        port=os.getenv('DB_PORT', '5432')
-    )
+    """Возвращает соединение с PostgreSQL, используя DATABASE_URL или отдельные переменные."""
+    database_url = os.getenv('DATABASE_URL')
+    if database_url:
+        # Если есть DATABASE_URL – используем её
+        conn = psycopg2.connect(database_url, sslmode='require')
+    else:
+        # Иначе собираем из отдельных переменных (для локальной разработки)
+        conn = psycopg2.connect(
+            dbname=os.getenv('DB_NAME', 'justid'),
+            user=os.getenv('DB_USER', 'postgres'),
+            password=os.getenv('DB_PASSWORD', 'postgres'),
+            host=os.getenv('DB_HOST', 'localhost'),
+            port=os.getenv('DB_PORT', '5432'),
+            sslmode=os.getenv('DB_SSLMODE', 'disable')
+        )
     conn.autocommit = False
     return conn
 
