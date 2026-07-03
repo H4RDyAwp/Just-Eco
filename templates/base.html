@@ -396,8 +396,8 @@
         .glass::before {
             content: '';
             position: absolute;
-            inset: -1px;
-            border-radius: 3rem;
+            inset: 0; /* было inset: -1px; */
+            border-radius: 3.5rem;
             padding: 1px;
             background: linear-gradient(135deg,
                     rgba(255, 255, 255, 0.30) 0%,
