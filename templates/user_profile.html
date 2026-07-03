@@ -93,7 +93,8 @@
     {% if posts %}
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
         {% for post in posts %}
-        <div class="post-card {% for style in post_styles %}{{ style.css_class }} {% endfor %}">
+        <div
+            class="post-card {% if post_styles %}{% for style in post_styles %}{{ style.css_class }} {% endfor %}{% endif %}">
             {% if post.title %}
             <h3 style="color: var(--text-primary); margin-bottom: 0.3rem;">{{ post.title }}</h3>
             {% endif %}

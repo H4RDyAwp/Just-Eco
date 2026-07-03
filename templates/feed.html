@@ -8,7 +8,7 @@
 <div style="display: flex; flex-direction: column; gap: 1.5rem;">
     {% if posts %}
     {% for post in posts %}
-    <div class="post-card {% for style in post.styles %}{{ style }} {% endfor %}">
+    <div class="post-card {% if post.styles %}{% for style in post.styles %}{{ style }} {% endfor %}{% endif %}">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
             <div>
                 <strong style="color: var(--text-primary);">{{ post.display_name }}</strong>
