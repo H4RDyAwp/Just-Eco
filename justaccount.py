@@ -63,12 +63,14 @@ def init_db():
                 last_reward_time DOUBLE PRECISION
             )
         ''')
-        # Посты
+        # Посты (с заголовком и картинкой)
         cur.execute('''
             CREATE TABLE IF NOT EXISTS posts (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                title TEXT,
                 content TEXT NOT NULL,
+                image_url TEXT,
                 created_at TIMESTAMP DEFAULT NOW(),
                 likes_count INTEGER DEFAULT 0,
                 dislikes_count INTEGER DEFAULT 0
@@ -129,7 +131,7 @@ def init_db():
         if count == 0:
             items = [
                 ('Золотой текст', 'Золотистый цвет текста в постах', 5.00, 'post_decoration', '🌟', 'gold-text', None),
-                ('Неоновый пост', 'Яркий неоновый фон для поста', 7.00, 'post_decoration', '💡', 'neon-post', None),
+                ('Неоновый пост', 'Переливающаяся обводка и лёгкий фон', 7.00, 'post_decoration', '💡', 'neon-post', None),
                 ('Рамка "Космос"', 'Космическая рамка для профиля', 10.00, 'profile_frame', '🌌', 'cosmic-frame', None),
                 ('Рамка "Классика"', 'Элегантная золотая рамка', 6.00, 'profile_frame', '✨', 'classic-frame', None),
             ]
@@ -188,10 +190,13 @@ def get_user_count():
     return count
 
 # ---------- ПОСТЫ ----------
-def create_post(user_id, content):
+def create_post(user_id, title, content, image_url=None):
     conn = get_db_connection()
     cur = get_cursor(conn)
-    cur.execute("INSERT INTO posts (user_id, content) VALUES (%s, %s)", (user_id, content))
+    cur.execute(
+        "INSERT INTO posts (user_id, title, content, image_url) VALUES (%s, %s, %s, %s)",
+        (user_id, title, content, image_url)
+    )
     conn.commit()
     cur.close()
     conn.close()
@@ -491,11 +496,9 @@ def toggle_equip_item(user_id, item_id):
         cur.close()
         conn.close()
         return False, "У вас нет этого украшения."
-    # Если это рамка профиля, отключаем другие активные рамки
     if item['category'] == 'profile_frame':
         if not inv['equipped']:  # включаем новую рамку
             cur.execute("UPDATE user_inventory SET equipped = FALSE WHERE user_id = %s AND item_id IN (SELECT id FROM shop_items WHERE category = 'profile_frame')", (user_id,))
-    # Переключаем состояние текущего украшения
     new_equipped = not inv['equipped']
     cur.execute("UPDATE user_inventory SET equipped = %s WHERE user_id = %s AND item_id = %s", (new_equipped, user_id, item_id))
     conn.commit()
@@ -582,6 +585,7 @@ def login():
         return redirect(url_for('dashboard'))
 
     return render_template('login.html')
+
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
@@ -598,24 +602,19 @@ def dashboard():
     my_posts = get_user_posts(user['id'], current_user_id=session['user_id'])
     stats = get_user_stats(user['id'])
 
-    # Получаем активные украшения для постов пользователя
-    equipped_post_decorations = get_equipped_items(user['id'], 'post_decoration')
-    post_styles = [item['css_class'] for item in equipped_post_decorations if item['css_class']]
+    # Активные украшения для постов и рамка профиля
+    post_styles = get_equipped_items(user['id'], 'post_decoration')
+    profile_frame = get_equipped_items(user['id'], 'profile_frame')
+    frame = profile_frame[0] if profile_frame else None
 
-    # Получаем активную рамку профиля (только одну)
-    equipped_profile_frames = get_equipped_items(user['id'], 'profile_frame')
-    profile_frame = equipped_profile_frames[0] if equipped_profile_frames else None
-
-    # Для каждого поста из my_posts можно также добавить стили автора, но они уже у текущего пользователя
-    # Можно просто передать post_styles и profile_frame
-
-    return render_template('dashboard.html', 
-                           user=user, 
-                           total_users=total_users, 
-                           my_posts=my_posts, 
+    return render_template('dashboard.html',
+                           user=user,
+                           total_users=total_users,
+                           my_posts=my_posts,
                            stats=stats,
                            post_styles=post_styles,
-                           profile_frame=profile_frame)
+                           frame=frame)
+
 @app.route('/feed')
 def feed():
     if 'user_id' not in session:
@@ -623,7 +622,7 @@ def feed():
         return redirect(url_for('login'))
 
     posts = get_posts(limit=50, user_id=session['user_id'])
-    # Получаем активные украшения для постов всех авторов
+    # Получаем активные украшения для всех авторов
     user_ids = set(post['user_id'] for post in posts)
     user_styles = {}
     if user_ids:
@@ -640,9 +639,9 @@ def feed():
         conn.close()
         for row in rows:
             user_styles.setdefault(row['user_id'], []).append(row['css_class'])
-    # Добавляем стили в каждый пост
     for post in posts:
         post['styles'] = user_styles.get(post['user_id'], [])
+
     return render_template('feed.html', posts=posts)
 
 @app.route('/create_post', methods=['GET', 'POST'])
@@ -652,15 +651,21 @@ def create_post_route():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
+        title = request.form.get('title', '').strip()
         content = request.form.get('content', '').strip()
+        image_url = request.form.get('image_url', '').strip()
+
         if not content:
-            flash('Пост не может быть пустым.', 'error')
+            flash('Текст поста не может быть пустым.', 'error')
+            return render_template('create_post.html')
+        if len(title) > 100:
+            flash('Заголовок не может быть длиннее 100 символов.', 'error')
             return render_template('create_post.html')
         if len(content) > 1000:
             flash('Пост слишком длинный (максимум 1000 символов).', 'error')
             return render_template('create_post.html')
 
-        create_post(session['user_id'], content)
+        create_post(session['user_id'], title, content, image_url if image_url else None)
 
         if claim_reward(session['user_id']):
             flash('Пост опубликован! Вы получили $3.67 за квест!', 'success')
@@ -763,12 +768,15 @@ def user_profile(user_id):
     posts = get_user_posts(user_id, current_user_id=session['user_id'])
     stats = get_user_stats(user_id)
     # Украшения пользователя
-    equipped_post_decoration = get_equipped_items(user_id, 'post_decoration')
+    post_styles = get_equipped_items(user_id, 'post_decoration')
     profile_frame = get_equipped_items(user_id, 'profile_frame')
-    post_style = equipped_post_decoration[0] if equipped_post_decoration else None
     frame = profile_frame[0] if profile_frame else None
-    return render_template('user_profile.html', profile_user=profile_user, posts=posts, stats=stats,
-                           post_style=post_style, frame=frame)
+    return render_template('user_profile.html',
+                           profile_user=profile_user,
+                           posts=posts,
+                           stats=stats,
+                           post_styles=post_styles,
+                           frame=frame)
 
 @app.route('/send_money/<int:user_id>', methods=['POST'])
 def send_money(user_id):
@@ -944,7 +952,7 @@ def admin_panel():
 @admin_required
 def admin_posts():
     posts = get_posts(limit=100, user_id=None)
-    # Получаем активные украшения для постов авторов
+    # Для каждого поста добавляем стили автора (для отображения в админке)
     user_ids = set(post['user_id'] for post in posts)
     user_styles = {}
     if user_ids:

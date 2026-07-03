@@ -28,11 +28,10 @@
                 <span style="color: var(--text-muted); font-size: 0.7rem; margin-left: 0.5rem;">
                     {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}
                 </span>
-                <span style="color: var(--text-muted); font-size: 0.7rem; margin-left: 0.5rem;">
-                    ❤️ {{ post.likes_count }} 👎 {{ post.dislikes_count }}
-                </span>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <span style="color: var(--text-secondary);">❤️ {{ post.likes_count }}</span>
+                <span style="color: var(--text-secondary);">👎 {{ post.dislikes_count }}</span>
                 <form method="POST" action="{{ url_for('admin_delete_post', post_id=post.id) }}"
                     style="display: inline-block;" onsubmit="return confirm('Удалить этот пост?');">
                     <button type="submit" class="ctrl-btn"
@@ -40,8 +39,18 @@
                 </form>
             </div>
         </div>
+        {% if post.title %}
+        <h3 style="color: var(--text-primary); margin-top: 0.5rem;">{{ post.title }}</h3>
+        {% endif %}
+        {% if post.image_url %}
+        <div style="margin: 0.8rem 0; border-radius: 1rem; overflow: hidden;">
+            <img src="{{ post.image_url }}" alt="Изображение"
+                style="width: 100%; max-height: 400px; object-fit: cover; display: block;"
+                onerror="this.style.display='none'" />
+        </div>
+        {% endif %}
         <p
-            style="margin-top: 0.5rem; line-height: 1.5; word-wrap: break-word; 
+            style="margin-top: 0.5rem; line-height: 1.5; word-wrap: break-word;
                        {% if 'gold-text' in post.styles %}color: #ffd700 !important;{% else %}color: var(--text-secondary);{% endif %}">
             {{ post.content }}
         </p>

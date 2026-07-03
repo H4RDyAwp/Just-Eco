@@ -94,8 +94,22 @@
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
         {% for post in posts %}
         <div class="post-card {% for style in post_styles %}{{ style.css_class }} {% endfor %}"
-            style="{% if post_styles|selectattr('css_class', 'equalto', 'neon-post')|list %}background: rgba(255, 0, 200, 0.08); border: 2px solid transparent; border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; animation: neonBorder 3s linear infinite; border-radius: 1.5rem;{% endif %}">
-            <p style="word-wrap: break-word;">{{ post.content }}</p>
+            style="{% if 'neon-post' in post_styles|map(attribute='css_class') %}background: rgba(255, 0, 200, 0.08); border: 2px solid transparent; border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; animation: neonBorder 3s linear infinite; border-radius: 1.5rem;{% endif %}">
+            {% if post.title %}
+            <h3 style="color: var(--text-primary); margin-bottom: 0.3rem;">{{ post.title }}</h3>
+            {% endif %}
+            {% if post.image_url %}
+            <div style="margin: 0.5rem 0; border-radius: 1rem; overflow: hidden;">
+                <img src="{{ post.image_url }}" alt="Изображение"
+                    style="width: 100%; max-height: 300px; object-fit: cover; display: block;"
+                    onerror="this.style.display='none'" />
+            </div>
+            {% endif %}
+            <p
+                style="word-wrap: break-word;
+                                  {% if 'gold-text' in post_styles|map(attribute='css_class') %}color: #ffd700 !important;{% else %}color: var(--text-secondary);{% endif %}">
+                {{ post.content }}
+            </p>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
                 <span style="color: var(--text-muted); font-size: 0.75rem;">{{ post.created_at.strftime('%Y-%m-%d
                     %H:%M') }}</span>
