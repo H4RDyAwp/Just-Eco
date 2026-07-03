@@ -18,14 +18,25 @@
                 </span>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <span style="color: var(--text-secondary);">❤️ {{ post.likes_count }}</span>
+                <span style="color: var(--text-secondary);">👍 {{ post.likes_count }}</span>
+                <span style="color: var(--text-secondary);">👎 {{ post.dislikes_count }}</span>
+
                 {% if post.liked %}
-                <span class="ctrl-btn"
-                    style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; background: var(--text-primary); color: var(--bg-1); cursor: default;">👍</span>
+                <a href="{{ url_for('like_post_route', post_id=post.id) }}" class="ctrl-btn"
+                    style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; background: var(--text-primary); color: var(--bg-1);">👍</a>
                 {% else %}
                 <a href="{{ url_for('like_post_route', post_id=post.id) }}" class="ctrl-btn"
                     style="width: auto; padding: 0 0.8rem; font-size: 0.7rem;">👍</a>
                 {% endif %}
+
+                {% if post.disliked %}
+                <a href="{{ url_for('dislike_post_route', post_id=post.id) }}" class="ctrl-btn"
+                    style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; background: var(--text-primary); color: var(--bg-1);">👎</a>
+                {% else %}
+                <a href="{{ url_for('dislike_post_route', post_id=post.id) }}" class="ctrl-btn"
+                    style="width: auto; padding: 0 0.8rem; font-size: 0.7rem;">👎</a>
+                {% endif %}
+
                 {% if current_user and (current_user.id == post.user_id or current_user.is_admin == 1) %}
                 <form method="POST" action="{{ url_for('delete_post_route', post_id=post.id) }}"
                     style="display: inline-block;" onsubmit="return confirm('Удалить этот пост?');">

@@ -39,6 +39,7 @@
             --btn-bg: rgba(255, 255, 255, 0.08);
             --btn-border: rgba(255, 255, 255, 0.10);
             --btn-hover-bg: rgba(255, 255, 255, 0.15);
+            --navbar-bg: rgba(10, 10, 20, 0.55);
         }
 
         body.light-mode {
@@ -62,6 +63,7 @@
             --btn-bg: rgba(0, 0, 0, 0.06);
             --btn-border: rgba(0, 0, 0, 0.08);
             --btn-hover-bg: rgba(0, 0, 0, 0.12);
+            --navbar-bg: rgba(240, 240, 250, 0.6);
         }
 
         body.dart-mode {
@@ -85,6 +87,7 @@
             --btn-bg: rgba(255, 255, 255, 0.08);
             --btn-border: rgba(255, 255, 255, 0.10);
             --btn-hover-bg: rgba(255, 255, 255, 0.15);
+            --navbar-bg: rgba(10, 10, 30, 0.55);
         }
 
         body.dark-mode {
@@ -108,6 +111,7 @@
             --btn-bg: rgba(255, 255, 255, 0.04);
             --btn-border: rgba(255, 255, 255, 0.06);
             --btn-hover-bg: rgba(255, 255, 255, 0.08);
+            --navbar-bg: rgba(0, 0, 0, 0.6);
         }
 
         /* ============================================================
@@ -142,10 +146,10 @@
             font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-1);
             padding: 1.5rem;
+            padding-top: 6rem;
             transition: background 0.6s ease, color 0.4s ease;
             perspective: 1200px;
             cursor: default;
-            /* overflow: hidden;  удалили, чтобы скроллинг работал */
         }
 
         body.no-scroll {
@@ -265,7 +269,106 @@
         }
 
         /* ============================================================
-                   5.  СТЕКЛЯННАЯ КАРТОЧКА
+                   5.  СТЕКЛЯННЫЙ ТОП-БАР (плавающий, с закруглениями)
+                   ============================================================ */
+        .navbar {
+            position: fixed;
+            top: 1.2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            max-width: 1200px;
+            width: calc(100% - 2.4rem);
+            padding: 0.6rem 1.8rem;
+            border-radius: 3rem;
+            background: var(--navbar-bg);
+            backdrop-filter: blur(24px) saturate(1.8);
+            -webkit-backdrop-filter: blur(24px) saturate(1.8);
+            border: 1px solid var(--glass-border);
+            box-shadow:
+                var(--glass-shadow),
+                var(--glass-inset),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        .navbar:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow:
+                0 40px 80px -20px rgba(0, 0, 0, 0.5),
+                var(--glass-inset),
+                inset 0 1px 0 rgba(255, 255, 255, 0.20);
+        }
+
+        .navbar::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 3rem;
+            padding: 1px;
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.25) 0%,
+                    rgba(255, 255, 255, 0.05) 40%,
+                    rgba(255, 255, 255, 0) 60%,
+                    rgba(255, 255, 255, 0.10) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0.6;
+            transition: opacity 0.5s ease;
+        }
+
+        .navbar:hover::before {
+            opacity: 1;
+        }
+
+        .navbar .nav-brand {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            letter-spacing: -0.02em;
+            opacity: 0.9;
+        }
+
+        .navbar .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .navbar .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 2rem;
+            transition: color 0.2s, background 0.2s;
+            white-space: nowrap;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .navbar .nav-links a:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .navbar .nav-links a.active {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* ============================================================
+                   6.  СТЕКЛЯННАЯ КАРТОЧКА
                    ============================================================ */
         .glass {
             position: relative;
@@ -359,7 +462,7 @@
         }
 
         /* ============================================================
-                   6.  КОНТЕНТ
+                   7.  КОНТЕНТ
                    ============================================================ */
         .content {
             position: relative;
@@ -457,7 +560,7 @@
             letter-spacing: 0.01em;
         }
 
-        /* ===== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ ФОРМ И НАВИГАЦИИ ===== */
+        /* ===== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ ФОРМ И КАРТОЧЕК ===== */
         .form-group {
             margin-bottom: 1.2rem;
         }
@@ -648,26 +751,6 @@
             gap: 0.3rem;
         }
 
-        /* Навигация в хедере */
-        .nav-links {
-            display: flex;
-            gap: 0.8rem;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-left: auto;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-        }
-
         /* Стили для постов */
         .post-card {
             background: var(--card-bg);
@@ -750,8 +833,52 @@
         }
 
         /* ============================================================
-                   7.  АДАПТИВНОСТЬ
+                   8.  АДАПТИВНОСТЬ
                    ============================================================ */
+        @media (max-width: 768px) {
+            .navbar {
+                top: 0.8rem;
+                width: calc(100% - 1.6rem);
+                padding: 0.5rem 1rem;
+                border-radius: 2rem;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.3rem;
+            }
+
+            .navbar .nav-links {
+                justify-content: center;
+                gap: 0.3rem;
+            }
+
+            .navbar .nav-links a {
+                font-size: 0.75rem;
+                padding: 0.2rem 0.5rem;
+            }
+
+            body {
+                padding-top: 6.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar {
+                top: 0.5rem;
+                width: calc(100% - 1rem);
+                padding: 0.4rem 0.6rem;
+                border-radius: 1.5rem;
+            }
+
+            .navbar .nav-links a {
+                font-size: 0.7rem;
+                padding: 0.15rem 0.4rem;
+            }
+
+            body {
+                padding-top: 5.5rem;
+            }
+        }
+
         @media (max-width: 600px) {
             .glass {
                 padding: 1.75rem 1.5rem;
@@ -765,12 +892,6 @@
             .header {
                 flex-direction: column;
                 align-items: flex-start;
-            }
-
-            .nav-links {
-                margin-left: 0;
-                width: 100%;
-                justify-content: flex-start;
             }
 
             .footer-top {
@@ -807,11 +928,33 @@
         <div class="orb orb--3"></div>
     </div>
 
+    <!-- ============================================================
+    СТЕКЛЯННЫЙ ТОП-БАР (плавающий, с закруглениями)
+    ============================================================ -->
+    <nav class="navbar">
+        <a href="{{ url_for('dashboard') }}" class="nav-brand">Just ID</a>
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}">Дашборд</a>
+            <a href="{{ url_for('feed') }}">Лента</a>
+            <a href="{{ url_for('create_post_route') }}">Новый пост</a>
+            <a href="{{ url_for('quests') }}">Квесты</a>
+            <a href="{{ url_for('users') }}">Поиск</a>
+            <a href="{{ url_for('settings') }}">Настройки</a>
+            {% if current_user and current_user.is_admin == 1 %}
+            <a href="{{ url_for('admin_panel') }}">Админка</a>
+            <a href="{{ url_for('admin_posts') }}">Упр. постами</a>
+            {% endif %}
+            {% if session.user_id %}
+            <a href="{{ url_for('logout') }}">Выйти</a>
+            {% endif %}
+        </div>
+    </nav>
+
     <!-- Основная стеклянная карточка -->
     <div class="glass" id="glass">
         <div class="gloss-bottom"></div>
         <div class="content">
-            <!-- Шапка с заголовком, бейджем и навигацией -->
+            <!-- Шапка с заголовком и бейджем -->
             <div class="header">
                 <div class="title-group">
                     <h1>{% block page_title %}Just ID{% endblock %}</h1>
@@ -819,21 +962,7 @@
                 </div>
                 <div class="badge">
                     <span class="dot"></span>
-                    {% block badge %}V 1.1{% endblock %}
-                </div>
-                <!-- Навигация -->
-                <div class="nav-links">
-                    <a href="{{ url_for('dashboard') }}">Дашборд</a>
-                    <a href="{{ url_for('feed') }}">Лента</a>
-                    <a href="{{ url_for('create_post_route') }}">Новый пост</a>
-                    <a href="{{ url_for('settings') }}">Настройки</a>
-                    {% if current_user and current_user.is_admin == 1 %}
-                    <a href="{{ url_for('admin_panel') }}">Админка</a>
-                    <a href="{{ url_for('admin_posts') }}">Упр. постами</a>
-                    {% endif %}
-                    {% if session.user_id %}
-                    <a href="{{ url_for('logout') }}">Выйти</a>
-                    {% endif %}
+                    {% block badge %}V 1.2{% endblock %}
                 </div>
             </div>
 
@@ -863,12 +992,6 @@
                         <button class="ctrl-btn" data-preset="neon" title="Неоновый">💜</button>
                     </div>
                 </div>
-                <!-- Слайдер 3D множителя -->
-                <div class="slider-wrap">
-                    <label for="tiltMultiplier">3D tilt</label>
-                    <input type="range" id="tiltMultiplier" min="0" max="2" step="0.01" value="1" />
-                    <span class="slider-value" id="tiltValue">1.00×</span>
-                </div>
             </div>
         </div>
     </div>
@@ -889,19 +1012,16 @@
             const slider = document.getElementById('tiltMultiplier');
             const tiltDisplay = document.getElementById('tiltValue');
 
-            // Получаем начальное значение из пользователя (или 0.30 по умолчанию)
             let tiltMultiplier = 0.30;
             {% if current_user %}
             tiltMultiplier = {{ current_user.tilt_multiplier }};
         {% endif %}
-        // Ограничиваем допустимым диапазоном
         tiltMultiplier = Math.min(2, Math.max(0, tiltMultiplier));
         if (slider) {
             slider.value = tiltMultiplier;
             tiltDisplay.textContent = tiltMultiplier.toFixed(2) + '×';
         }
 
-        // Обновление при изменении слайдера (только для текущей сессии, не сохраняется в БД)
         if (slider) {
             slider.addEventListener('input', () => {
                 tiltMultiplier = parseFloat(slider.value);
@@ -912,7 +1032,7 @@
         // --- Плавный 3D-наклон с множителем (LERP) ---
         let targetX = 0, targetY = 0;
         let currentX = 0, currentY = 0;
-        const BASE_MAX_ANGLE = 8; // градусы
+        const BASE_MAX_ANGLE = 8;
 
         glass.addEventListener('mousemove', (e) => {
             const rect = glass.getBoundingClientRect();
@@ -939,7 +1059,7 @@
         }
         animateTilt();
 
-        // --- Spotlight (подсветка от мыши) ---
+        // --- Spotlight ---
         document.addEventListener('mousemove', (e) => {
             const x = (e.clientX / window.innerWidth) * 100;
             const y = (e.clientY / window.innerHeight) * 100;
@@ -947,7 +1067,7 @@
             spotlight.style.setProperty('--my', y + '%');
         });
 
-        // --- Переключение тем (Light / Dart / Dark) ---
+        // --- Переключение тем ---
         const themeBtns = document.querySelectorAll('[data-theme]');
 
         function setTheme(theme) {
@@ -971,7 +1091,7 @@
             });
         });
 
-        // --- Цветовые пресеты (орбы) ---
+        // --- Цветовые пресеты ---
         const presetBtns = document.querySelectorAll('[data-preset]');
 
         function setPreset(preset) {
@@ -999,9 +1119,6 @@
             targetX = 0;
             targetY = 0;
         });
-
-            // --- Блокировка скролла при открытии модальных окон ---
-            // (обрабатывается в settings.html, но можно оставить на будущее)
 
         }) ();
     </script>

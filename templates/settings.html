@@ -2,9 +2,10 @@
 
 {% block title %}Настройки — Just ID{% endblock %}
 {% block page_title %}Настройки профиля{% endblock %}
-{% block sub_title %}Измените свои данные{% endblock %}
+{% block sub_title %}Измените свои данные и предпочтения{% endblock %}
 
 {% block content %}
+<!-- Форма обновления профиля -->
 <form method="POST" action="{{ url_for('settings') }}">
     <div class="form-group">
         <label for="display_name">Отображаемое имя</label>
@@ -23,20 +24,31 @@
         <input type="password" id="confirm_password" name="confirm_password" />
     </div>
 
-    <!-- НОВОЕ: настройка 3D-эффекта -->
+    <!-- Управление 3D-эффектом -->
+    <hr style="border-color: var(--glass-border); margin: 1.5rem 0 1rem;" />
     <div class="form-group">
-        <label for="tilt_multiplier">Сила 3D-эффекта (0.00 – 2.00)</label>
-        <input type="number" id="tilt_multiplier" name="tilt_multiplier" step="0.01" min="0" max="2" value="{{ "
-            %.2f"|format(user.tilt_multiplier) }}" style="width: 100%;" />
-        <small style="color: var(--text-muted); display: block; margin-top: 0.3rem;">
-            Значение 0 отключает наклон, 1 – стандартная сила, 2 – максимальная.
-        </small>
+        <label for="tilt_range" style="font-size: 0.9rem;">🌀 Сила 3D-эффекта: <span id="tilt_display">{{
+                "%.2f"|format(user.tilt_multiplier) }}</span></label>
+        <input type="range" id="tilt_range" name="tilt_multiplier" min="0" max="2" step="0.01"
+            value="{{ user.tilt_multiplier }}" style="width: 100%;" />
+        <small style="color: var(--text-muted);">0 — выключено, 1 — стандартно, 2 — максимально</small>
     </div>
 
     <button type="submit" class="btn-submit">Сохранить изменения</button>
 </form>
 
-<!-- ОПАСНАЯ ЗОНА (без изменений) -->
+<!-- Управление темой (отдельно от формы, т.к. сохраняется в localStorage) -->
+<hr style="border-color: var(--glass-border); margin: 2rem 0 1rem;" />
+<h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">🎨 Оформление</h3>
+<p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Выберите тему интерфейса (сохраняется в
+    браузере):</p>
+<div class="controls" style="justify-content: flex-start; gap: 0.5rem;">
+    <button class="ctrl-btn theme-btn" data-theme="light" title="Светлая">☀️ Light</button>
+    <button class="ctrl-btn theme-btn active" data-theme="dart" title="Dart">🌙 Dart</button>
+    <button class="ctrl-btn theme-btn" data-theme="dark" title="Тёмная">🌑 Dark</button>
+</div>
+
+<!-- ОПАСНАЯ ЗОНА -->
 <hr style="border-color: var(--glass-border); margin: 2rem 0 1rem;" />
 <h3 style="color: #ef4444; margin-bottom: 0.5rem;">⚠️ Опасная зона</h3>
 <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
@@ -46,7 +58,7 @@
     🗑️ Удалить аккаунт
 </button>
 
-<!-- Модальное окно (как было) -->
+<!-- Модальное окно -->
 <div id="deleteModal" class="modal-overlay">
     <div class="modal-window glass">
         <h2 style="margin-bottom: 1rem;">Удаление аккаунта</h2>
@@ -80,8 +92,8 @@
     <a href="{{ url_for('dashboard') }}">← Вернуться в дашборд</a>
 </div>
 
+<!-- Стили и скрипты для модального окна -->
 <style>
-    /* Стили для модального окна (те же) */
     .modal-overlay {
         position: fixed;
         inset: 0;
@@ -165,6 +177,17 @@
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
         });
+
+        // Отображение значения ползунка 3D
+        const tiltRange = document.getElementById('tilt_range');
+        const tiltDisplay = document.getElementById('tilt_display');
+        if (tiltRange && tiltDisplay) {
+            tiltRange.addEventListener('input', function () {
+                tiltDisplay.textContent = parseFloat(this.value).toFixed(2);
+            });
+        }
+
+        // Кнопки выбора темы (работают через атрибуты data-theme и скрипт из base.html)
     })();
 </script>
 {% endblock %}

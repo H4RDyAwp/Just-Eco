@@ -1,13 +1,14 @@
 import sqlite3
 import hashlib
 import os
+import time
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here-change-in-production'
 
-# ---------- ХЕШИРОВАНИЕ ----------
+# ---------- ХЕШИРОВАНИЕ ПАРОЛЕЙ ----------
 def hash_password(password):
     salt = os.urandom(16).hex()
     return salt + ':' + hashlib.sha256((salt + password).encode()).hexdigest()
@@ -35,10 +36,10 @@ def init_db():
             balance REAL DEFAULT 0.0,
             is_admin INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            tilt_multiplier REAL DEFAULT 0.30
+            tilt_multiplier REAL DEFAULT 0.30,
+            last_reward_time REAL
         )
     ''')
-    # Таблица постов
     db.execute('''
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,15 +47,17 @@ def init_db():
             content TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             likes_count INTEGER DEFAULT 0,
+            dislikes_count INTEGER DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
     ''')
-    # Таблица лайков (уникальная пара user_id + post_id)
+    db.execute('DROP TABLE IF EXISTS likes')
     db.execute('''
-        CREATE TABLE IF NOT EXISTS likes (
+        CREATE TABLE IF NOT EXISTS reactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             post_id INTEGER NOT NULL,
+            reaction_type INTEGER NOT NULL CHECK (reaction_type IN (1, -1)),
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
             UNIQUE(user_id, post_id)
@@ -62,9 +65,14 @@ def init_db():
     ''')
     db.commit()
 
-    # Добавляем столбец tilt_multiplier, если его нет (для старой БД)
+    # Добавляем столбцы, если их нет (для обновления старой БД)
     try:
         db.execute('ALTER TABLE users ADD COLUMN tilt_multiplier REAL DEFAULT 0.30')
+        db.commit()
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute('ALTER TABLE users ADD COLUMN last_reward_time REAL')
         db.commit()
     except sqlite3.OperationalError:
         pass
@@ -116,15 +124,15 @@ def create_post(user_id, content):
     db.close()
 
 def get_posts(limit=50, offset=0, user_id=None):
-    """Возвращает посты. Если передан user_id, добавляет поле liked (1/0)."""
     db = get_db()
     if user_id is not None:
         posts = db.execute('''
             SELECT posts.*, users.display_name, users.username,
-                   CASE WHEN likes.id IS NOT NULL THEN 1 ELSE 0 END AS liked
+                   CASE WHEN reactions.reaction_type = 1 THEN 1 ELSE 0 END AS liked,
+                   CASE WHEN reactions.reaction_type = -1 THEN 1 ELSE 0 END AS disliked
             FROM posts
             JOIN users ON posts.user_id = users.id
-            LEFT JOIN likes ON likes.post_id = posts.id AND likes.user_id = ?
+            LEFT JOIN reactions ON reactions.post_id = posts.id AND reactions.user_id = ?
             ORDER BY posts.created_at DESC
             LIMIT ? OFFSET ?
         ''', (user_id, limit, offset)).fetchall()
@@ -140,15 +148,15 @@ def get_posts(limit=50, offset=0, user_id=None):
     return posts
 
 def get_user_posts(user_id, current_user_id=None):
-    """Посты конкретного пользователя с полем liked, если передан current_user_id."""
     db = get_db()
     if current_user_id is not None:
         posts = db.execute('''
             SELECT posts.*, users.display_name, users.username,
-                   CASE WHEN likes.id IS NOT NULL THEN 1 ELSE 0 END AS liked
+                   CASE WHEN reactions.reaction_type = 1 THEN 1 ELSE 0 END AS liked,
+                   CASE WHEN reactions.reaction_type = -1 THEN 1 ELSE 0 END AS disliked
             FROM posts
             JOIN users ON posts.user_id = users.id
-            LEFT JOIN likes ON likes.post_id = posts.id AND likes.user_id = ?
+            LEFT JOIN reactions ON reactions.post_id = posts.id AND reactions.user_id = ?
             WHERE posts.user_id = ?
             ORDER BY posts.created_at DESC
         ''', (current_user_id, user_id)).fetchall()
@@ -174,25 +182,37 @@ def get_post(post_id):
     db.close()
     return post
 
-def get_like(user_id, post_id):
+def toggle_reaction(user_id, post_id, reaction_type):
     db = get_db()
-    like = db.execute('SELECT * FROM likes WHERE user_id = ? AND post_id = ?', (user_id, post_id)).fetchone()
-    db.close()
-    return like
-
-def add_like(user_id, post_id):
-    """Добавляет лайк, если его ещё нет. Возвращает True/False."""
-    db = get_db()
-    try:
-        db.execute('INSERT INTO likes (user_id, post_id) VALUES (?, ?)', (user_id, post_id))
-        db.execute('UPDATE posts SET likes_count = likes_count + 1 WHERE id = ?', (post_id,))
+    existing = db.execute('SELECT reaction_type FROM reactions WHERE user_id = ? AND post_id = ?', (user_id, post_id)).fetchone()
+    if existing:
+        if existing['reaction_type'] == reaction_type:
+            db.execute('DELETE FROM reactions WHERE user_id = ? AND post_id = ?', (user_id, post_id))
+            if reaction_type == 1:
+                db.execute('UPDATE posts SET likes_count = likes_count - 1 WHERE id = ?', (post_id,))
+            else:
+                db.execute('UPDATE posts SET dislikes_count = dislikes_count - 1 WHERE id = ?', (post_id,))
+            db.commit()
+            db.close()
+            return {'action': 'removed', 'new_type': None}
+        else:
+            db.execute('UPDATE reactions SET reaction_type = ? WHERE user_id = ? AND post_id = ?', (reaction_type, user_id, post_id))
+            if reaction_type == 1:
+                db.execute('UPDATE posts SET dislikes_count = dislikes_count - 1, likes_count = likes_count + 1 WHERE id = ?', (post_id,))
+            else:
+                db.execute('UPDATE posts SET likes_count = likes_count - 1, dislikes_count = dislikes_count + 1 WHERE id = ?', (post_id,))
+            db.commit()
+            db.close()
+            return {'action': 'changed', 'new_type': reaction_type}
+    else:
+        db.execute('INSERT INTO reactions (user_id, post_id, reaction_type) VALUES (?, ?, ?)', (user_id, post_id, reaction_type))
+        if reaction_type == 1:
+            db.execute('UPDATE posts SET likes_count = likes_count + 1 WHERE id = ?', (post_id,))
+        else:
+            db.execute('UPDATE posts SET dislikes_count = dislikes_count + 1 WHERE id = ?', (post_id,))
         db.commit()
-        success = True
-    except sqlite3.IntegrityError:
-        success = False
-    finally:
         db.close()
-    return success
+        return {'action': 'added', 'new_type': reaction_type}
 
 def delete_post(post_id, user_id, is_admin):
     db = get_db()
@@ -208,6 +228,32 @@ def delete_post(post_id, user_id, is_admin):
     db.close()
     return False
 
+# ---------- ФУНКЦИИ ДЛЯ НАГРАД (ИСПРАВЛЕНЫ) ----------
+def get_last_reward_time(user_id):
+    db = get_db()
+    row = db.execute('SELECT last_reward_time FROM users WHERE id = ?', (user_id,)).fetchone()
+    db.close()
+    return row['last_reward_time'] if row else None
+
+def can_claim_reward(user_id):
+    last = get_last_reward_time(user_id)
+    if last is None:
+        return True
+    try:
+        last = float(last)
+    except (TypeError, ValueError):
+        return True  # если данные повреждены, разрешаем
+    return (time.time() - last) >= 180
+
+def claim_reward(user_id):
+    if not can_claim_reward(user_id):
+        return False
+    db = get_db()
+    db.execute('UPDATE users SET balance = balance + 3.67, last_reward_time = ? WHERE id = ?', (time.time(), user_id))
+    db.commit()
+    db.close()
+    return True
+
 # ---------- КОНТЕКСТНЫЙ ПРОЦЕССОР ----------
 @app.context_processor
 def inject_user():
@@ -216,7 +262,7 @@ def inject_user():
         return dict(current_user=user)
     return dict(current_user=None)
 
-# ---------- ДЕКОРАТОР ДЛЯ АДМИНОВ ----------
+# ---------- ДЕКОРАТОР ----------
 from functools import wraps
 def admin_required(f):
     @wraps(f)
@@ -237,7 +283,97 @@ def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
+# ---------- ПОИСК ПОЛЬЗОВАТЕЛЕЙ ----------
+def search_users(query, limit=20):
+    db = get_db()
+    users = db.execute('''
+        SELECT id, username, display_name, description, balance 
+        FROM users 
+        WHERE username LIKE ? OR display_name LIKE ?
+        ORDER BY display_name
+        LIMIT ?
+    ''', ('%' + query + '%', '%' + query + '%', limit)).fetchall()
+    db.close()
+    return users
 
+# ---------- МАРШРУТЫ ДЛЯ ПОИСКА И ПРОФИЛЕЙ ----------
+@app.route('/users')
+def users():
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    query = request.args.get('q', '').strip()
+    results = []
+    if query:
+        results = search_users(query)
+    return render_template('users.html', query=query, results=results)
+
+@app.route('/user/<int:user_id>')
+def user_profile(user_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    profile_user = get_user_by_id(user_id)
+    if not profile_user:
+        flash('Пользователь не найден.', 'error')
+        return redirect(url_for('users'))
+    posts = get_user_posts(user_id, current_user_id=session['user_id'])
+    stats = get_user_stats(user_id)  # <-- новая статистика
+    return render_template('user_profile.html', profile_user=profile_user, posts=posts, stats=stats)
+
+def get_user_stats(user_id):
+    """Возвращает статистику пользователя: кол-во постов, лайков, дизлайков, рейтинг."""
+    db = get_db()
+    # Количество постов
+    posts_count = db.execute('SELECT COUNT(*) FROM posts WHERE user_id = ?', (user_id,)).fetchone()[0]
+    # Суммарные лайки и дизлайки на всех постах пользователя
+    likes_sum = db.execute('SELECT SUM(likes_count) FROM posts WHERE user_id = ?', (user_id,)).fetchone()[0] or 0
+    dislikes_sum = db.execute('SELECT SUM(dislikes_count) FROM posts WHERE user_id = ?', (user_id,)).fetchone()[0] or 0
+    rating = likes_sum - dislikes_sum
+    db.close()
+    return {
+        'posts_count': posts_count,
+        'likes_received': likes_sum,
+        'dislikes_received': dislikes_sum,
+        'rating': rating
+    }
+@app.route('/send_money/<int:user_id>', methods=['POST'])
+def send_money(user_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    sender_id = session['user_id']
+    amount_str = request.form.get('amount', '').strip()
+    try:
+        amount = float(amount_str.replace(',', '.'))
+        if amount <= 0:
+            raise ValueError
+    except:
+        flash('Введите корректную сумму.', 'error')
+        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
+
+    if sender_id == user_id:
+        flash('Нельзя отправить деньги самому себе.', 'error')
+        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
+
+    sender = get_user_by_id(sender_id)
+    receiver = get_user_by_id(user_id)
+    if not sender or not receiver:
+        flash('Пользователь не найден.', 'error')
+        return redirect(url_for('users'))
+
+    if sender['balance'] < amount:
+        flash('Недостаточно средств.', 'error')
+        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
+
+    db = get_db()
+    db.execute('UPDATE users SET balance = balance - ? WHERE id = ?', (amount, sender_id))
+    db.execute('UPDATE users SET balance = balance + ? WHERE id = ?', (amount, user_id))
+    db.commit()
+    db.close()
+
+    flash(f'Вы отправили ${amount:.2f} пользователю {receiver["display_name"]}.', 'success')
+    return redirect(url_for('user_profile', user_id=user_id))
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -301,8 +437,9 @@ def dashboard():
 
     total_users = get_user_count() if user['is_admin'] == 1 else None
     my_posts = get_user_posts(user['id'], current_user_id=session['user_id'])
+    stats = get_user_stats(user['id'])  # <-- новая статистика
 
-    return render_template('dashboard.html', user=user, total_users=total_users, my_posts=my_posts)
+    return render_template('dashboard.html', user=user, total_users=total_users, my_posts=my_posts, stats=stats)
 
 @app.route('/feed')
 def feed():
@@ -329,7 +466,10 @@ def create_post_route():
             return render_template('create_post.html')
 
         create_post(session['user_id'], content)
-        flash('Пост опубликован!', 'success')
+        flash('Пост опубликован.', 'info')
+        if claim_reward(session['user_id']):
+            flash('Вы получили $3.67 за квест!', 'success')
+
         return redirect(url_for('feed'))
 
     return render_template('create_post.html')
@@ -340,11 +480,28 @@ def like_post_route(post_id):
         flash('Пожалуйста, войдите.', 'error')
         return redirect(url_for('login'))
 
-    user_id = session['user_id']
-    if add_like(user_id, post_id):
+    result = toggle_reaction(session['user_id'], post_id, 1)
+    if result['action'] == 'added':
         flash('Лайк поставлен!', 'success')
-    else:
-        flash('Вы уже лайкнули этот пост.', 'info')
+    elif result['action'] == 'removed':
+        flash('Лайк убран.', 'info')
+    elif result['action'] == 'changed':
+        flash('Вы изменили реакцию на лайк.', 'success')
+    return redirect(request.referrer or url_for('feed'))
+
+@app.route('/dislike/<int:post_id>')
+def dislike_post_route(post_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+
+    result = toggle_reaction(session['user_id'], post_id, -1)
+    if result['action'] == 'added':
+        flash('Дизлайк поставлен!', 'success')
+    elif result['action'] == 'removed':
+        flash('Дизлайк убран.', 'info')
+    elif result['action'] == 'changed':
+        flash('Вы изменили реакцию на дизлайк.', 'success')
     return redirect(request.referrer or url_for('feed'))
 
 @app.route('/delete_post/<int:post_id>', methods=['POST'])
@@ -361,6 +518,31 @@ def delete_post_route(post_id):
 
     return redirect(request.referrer or url_for('feed'))
 
+@app.route('/quests')
+def quests():
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+
+    user = get_user_by_id(session['user_id'])
+    if not user:
+        session.clear()
+        flash('Сессия устарела.', 'error')
+        return redirect(url_for('login'))
+
+    can_claim = can_claim_reward(user['id'])
+    remaining = 0
+    if not can_claim:
+        last = get_last_reward_time(user['id'])
+        if last:
+            try:
+                last = float(last)
+                remaining = max(0, 180 - (time.time() - last))
+            except:
+                remaining = 0
+
+    return render_template('quests.html', user=user, can_claim=can_claim, remaining=remaining)
+
 # ---------- НАСТРОЙКИ ----------
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -374,7 +556,6 @@ def settings():
         flash('Сессия устарела.', 'error')
         return redirect(url_for('login'))
 
-    # Обработка удаления аккаунта
     if request.method == 'POST' and request.form.get('delete_account'):
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
@@ -396,7 +577,6 @@ def settings():
         flash('Ваш аккаунт был удалён.', 'info')
         return redirect(url_for('login'))
 
-    # Обычное обновление профиля
     if request.method == 'POST':
         display_name = request.form.get('display_name', '').strip()
         description = request.form.get('description', '').strip()
@@ -450,7 +630,7 @@ def admin_panel():
 @app.route('/admin/posts')
 @admin_required
 def admin_posts():
-    posts = get_posts(limit=100, user_id=None)  # админу не нужно поле liked
+    posts = get_posts(limit=100, user_id=None)
     return render_template('admin_posts.html', posts=posts)
 
 @app.route('/admin/post/delete/<int:post_id>', methods=['POST'])
@@ -520,4 +700,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0",debug=False, port=10000)
+    app.run(debug=True, port=5001)
