@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: just-id
+    runtime: python
+    repo: https://github.com/YOUR_USERNAME/YOUR_REPO
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_NAME
+        fromDatabase:
+          name: just-id-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: just-id-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: just-id-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: just-id-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: just-id-db
+          property: port
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+
+databases:
+  - name: just-id-db
+    plan: free

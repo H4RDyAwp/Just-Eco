@@ -1,12 +1,98 @@
-import sqlite3
-import hashlib
 import os
 import time
+import hashlib
 from datetime import datetime
+from functools import wraps
+
+import psycopg2
+import psycopg2.extras
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from dotenv import load_dotenv
+
+load_dotenv()  # загружаем переменные из .env
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
+
+# ---------- ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ ----------
+def get_db_connection():
+    """Возвращает соединение с PostgreSQL и курсор в формате RealDictCursor."""
+    conn = psycopg2.connect(
+        dbname=os.getenv('DB_NAME', 'justid'),
+        user=os.getenv('DB_USER', 'postgres'),
+        password=os.getenv('DB_PASSWORD', 'postgres'),
+        host=os.getenv('DB_HOST', 'localhost'),
+        port=os.getenv('DB_PORT', '5432')
+    )
+    conn.autocommit = False
+    return conn
+
+def get_cursor(conn):
+    """Возвращает курсор с доступом по имени колонки."""
+    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+# ---------- ИНИЦИАЛИЗАЦИЯ БАЗЫ ----------
+def init_db():
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        # Таблица users
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                description TEXT,
+                balance REAL DEFAULT 0.0,
+                is_admin INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW(),
+                tilt_multiplier REAL DEFAULT 0.30,
+                last_reward_time DOUBLE PRECISION
+            )
+        ''')
+        # Таблица posts
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS posts (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                likes_count INTEGER DEFAULT 0,
+                dislikes_count INTEGER DEFAULT 0
+            )
+        ''')
+        # Таблица reactions (лайки/дизлайки)
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS reactions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                reaction_type INTEGER NOT NULL CHECK (reaction_type IN (1, -1)),
+                UNIQUE(user_id, post_id)
+            )
+        ''')
+        conn.commit()
+
+        # Создаём администратора, если его нет
+        cur.execute("SELECT * FROM users WHERE username = 'admin'")
+        admin = cur.fetchone()
+        if not admin:
+            hashed = hash_password('admin123')
+            cur.execute(
+                "INSERT INTO users (username, password_hash, display_name, description, balance, is_admin, tilt_multiplier) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                ('admin', hashed, 'Administrator', 'Главный администратор', 999.99, 1, 0.30)
+            )
+            conn.commit()
+            print("Администратор создан: admin / admin123")
+    except Exception as e:
+        conn.rollback()
+        print(f"Ошибка инициализации БД: {e}")
+    finally:
+        cur.close()
+        conn.close()
+
+init_db()
 
 # ---------- ХЕШИРОВАНИЕ ПАРОЛЕЙ ----------
 def hash_password(password):
@@ -17,222 +103,187 @@ def verify_password(password, hashed):
     salt, h = hashed.split(':')
     return h == hashlib.sha256((salt + password).encode()).hexdigest()
 
-# ---------- БАЗА ДАННЫХ ----------
-def get_db():
-    db = sqlite3.connect('instance/users.db')
-    db.row_factory = sqlite3.Row
-    return db
-
-def init_db():
-    db = get_db()
-    # Таблица пользователей
-    db.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            display_name TEXT NOT NULL,
-            description TEXT,
-            balance REAL DEFAULT 0.0,
-            is_admin INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            tilt_multiplier REAL DEFAULT 0.30,
-            last_reward_time REAL
-        )
-    ''')
-    db.execute('''
-        CREATE TABLE IF NOT EXISTS posts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            likes_count INTEGER DEFAULT 0,
-            dislikes_count INTEGER DEFAULT 0,
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        )
-    ''')
-    db.execute('DROP TABLE IF EXISTS likes')
-    db.execute('''
-        CREATE TABLE IF NOT EXISTS reactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            post_id INTEGER NOT NULL,
-            reaction_type INTEGER NOT NULL CHECK (reaction_type IN (1, -1)),
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-            FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
-            UNIQUE(user_id, post_id)
-        )
-    ''')
-    db.commit()
-
-    # Добавляем столбцы, если их нет (для обновления старой БД)
-    try:
-        db.execute('ALTER TABLE users ADD COLUMN tilt_multiplier REAL DEFAULT 0.30')
-        db.commit()
-    except sqlite3.OperationalError:
-        pass
-    try:
-        db.execute('ALTER TABLE users ADD COLUMN last_reward_time REAL')
-        db.commit()
-    except sqlite3.OperationalError:
-        pass
-
-    # Создаём администратора
-    admin = db.execute('SELECT * FROM users WHERE username = ?', ('admin',)).fetchone()
-    if not admin:
-        hashed = hash_password('admin123')
-        db.execute(
-            'INSERT INTO users (username, password_hash, display_name, description, balance, is_admin, tilt_multiplier) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            ('admin', hashed, 'Administrator', 'Главный администратор', 999.99, 1, 0.30)
-        )
-        db.commit()
-        print("Администратор создан: admin / admin123")
-    db.close()
-
-init_db()
-
 # ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
 def get_user_by_username(username):
-    db = get_db()
-    user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
     return user
 
 def get_user_by_id(user_id):
-    db = get_db()
-    user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
     return user
 
 def get_all_users():
-    db = get_db()
-    users = db.execute('SELECT * FROM users ORDER BY id').fetchall()
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT * FROM users ORDER BY id")
+    users = cur.fetchall()
+    cur.close()
+    conn.close()
     return users
 
 def get_user_count():
-    db = get_db()
-    count = db.execute('SELECT COUNT(*) FROM users').fetchone()[0]
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT COUNT(*) FROM users")
+    count = cur.fetchone()['count']
+    cur.close()
+    conn.close()
     return count
 
 # ---------- ФУНКЦИИ ДЛЯ ПОСТОВ ----------
 def create_post(user_id, content):
-    db = get_db()
-    db.execute('INSERT INTO posts (user_id, content) VALUES (?, ?)', (user_id, content))
-    db.commit()
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("INSERT INTO posts (user_id, content) VALUES (%s, %s)", (user_id, content))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 def get_posts(limit=50, offset=0, user_id=None):
-    db = get_db()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
     if user_id is not None:
-        posts = db.execute('''
+        cur.execute('''
             SELECT posts.*, users.display_name, users.username,
                    CASE WHEN reactions.reaction_type = 1 THEN 1 ELSE 0 END AS liked,
                    CASE WHEN reactions.reaction_type = -1 THEN 1 ELSE 0 END AS disliked
             FROM posts
             JOIN users ON posts.user_id = users.id
-            LEFT JOIN reactions ON reactions.post_id = posts.id AND reactions.user_id = ?
+            LEFT JOIN reactions ON reactions.post_id = posts.id AND reactions.user_id = %s
             ORDER BY posts.created_at DESC
-            LIMIT ? OFFSET ?
-        ''', (user_id, limit, offset)).fetchall()
+            LIMIT %s OFFSET %s
+        ''', (user_id, limit, offset))
     else:
-        posts = db.execute('''
+        cur.execute('''
             SELECT posts.*, users.display_name, users.username
             FROM posts
             JOIN users ON posts.user_id = users.id
             ORDER BY posts.created_at DESC
-            LIMIT ? OFFSET ?
-        ''', (limit, offset)).fetchall()
-    db.close()
+            LIMIT %s OFFSET %s
+        ''', (limit, offset))
+    posts = cur.fetchall()
+    cur.close()
+    conn.close()
     return posts
 
 def get_user_posts(user_id, current_user_id=None):
-    db = get_db()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
     if current_user_id is not None:
-        posts = db.execute('''
+        cur.execute('''
             SELECT posts.*, users.display_name, users.username,
                    CASE WHEN reactions.reaction_type = 1 THEN 1 ELSE 0 END AS liked,
                    CASE WHEN reactions.reaction_type = -1 THEN 1 ELSE 0 END AS disliked
             FROM posts
             JOIN users ON posts.user_id = users.id
-            LEFT JOIN reactions ON reactions.post_id = posts.id AND reactions.user_id = ?
-            WHERE posts.user_id = ?
+            LEFT JOIN reactions ON reactions.post_id = posts.id AND reactions.user_id = %s
+            WHERE posts.user_id = %s
             ORDER BY posts.created_at DESC
-        ''', (current_user_id, user_id)).fetchall()
+        ''', (current_user_id, user_id))
     else:
-        posts = db.execute('''
+        cur.execute('''
             SELECT posts.*, users.display_name, users.username
             FROM posts
             JOIN users ON posts.user_id = users.id
-            WHERE posts.user_id = ?
+            WHERE posts.user_id = %s
             ORDER BY posts.created_at DESC
-        ''', (user_id,)).fetchall()
-    db.close()
+        ''', (user_id,))
+    posts = cur.fetchall()
+    cur.close()
+    conn.close()
     return posts
 
 def get_post(post_id):
-    db = get_db()
-    post = db.execute('''
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute('''
         SELECT posts.*, users.display_name, users.username 
         FROM posts 
         JOIN users ON posts.user_id = users.id 
-        WHERE posts.id = ?
-    ''', (post_id,)).fetchone()
-    db.close()
+        WHERE posts.id = %s
+    ''', (post_id,))
+    post = cur.fetchone()
+    cur.close()
+    conn.close()
     return post
 
 def toggle_reaction(user_id, post_id, reaction_type):
-    db = get_db()
-    existing = db.execute('SELECT reaction_type FROM reactions WHERE user_id = ? AND post_id = ?', (user_id, post_id)).fetchone()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT reaction_type FROM reactions WHERE user_id = %s AND post_id = %s", (user_id, post_id))
+    existing = cur.fetchone()
+
     if existing:
         if existing['reaction_type'] == reaction_type:
-            db.execute('DELETE FROM reactions WHERE user_id = ? AND post_id = ?', (user_id, post_id))
+            # Удаляем реакцию
+            cur.execute("DELETE FROM reactions WHERE user_id = %s AND post_id = %s", (user_id, post_id))
             if reaction_type == 1:
-                db.execute('UPDATE posts SET likes_count = likes_count - 1 WHERE id = ?', (post_id,))
+                cur.execute("UPDATE posts SET likes_count = likes_count - 1 WHERE id = %s", (post_id,))
             else:
-                db.execute('UPDATE posts SET dislikes_count = dislikes_count - 1 WHERE id = ?', (post_id,))
-            db.commit()
-            db.close()
+                cur.execute("UPDATE posts SET dislikes_count = dislikes_count - 1 WHERE id = %s", (post_id,))
+            conn.commit()
+            cur.close()
+            conn.close()
             return {'action': 'removed', 'new_type': None}
         else:
-            db.execute('UPDATE reactions SET reaction_type = ? WHERE user_id = ? AND post_id = ?', (reaction_type, user_id, post_id))
+            # Меняем реакцию
+            cur.execute("UPDATE reactions SET reaction_type = %s WHERE user_id = %s AND post_id = %s", (reaction_type, user_id, post_id))
             if reaction_type == 1:
-                db.execute('UPDATE posts SET dislikes_count = dislikes_count - 1, likes_count = likes_count + 1 WHERE id = ?', (post_id,))
+                cur.execute("UPDATE posts SET dislikes_count = dislikes_count - 1, likes_count = likes_count + 1 WHERE id = %s", (post_id,))
             else:
-                db.execute('UPDATE posts SET likes_count = likes_count - 1, dislikes_count = dislikes_count + 1 WHERE id = ?', (post_id,))
-            db.commit()
-            db.close()
+                cur.execute("UPDATE posts SET likes_count = likes_count - 1, dislikes_count = dislikes_count + 1 WHERE id = %s", (post_id,))
+            conn.commit()
+            cur.close()
+            conn.close()
             return {'action': 'changed', 'new_type': reaction_type}
     else:
-        db.execute('INSERT INTO reactions (user_id, post_id, reaction_type) VALUES (?, ?, ?)', (user_id, post_id, reaction_type))
+        cur.execute("INSERT INTO reactions (user_id, post_id, reaction_type) VALUES (%s, %s, %s)", (user_id, post_id, reaction_type))
         if reaction_type == 1:
-            db.execute('UPDATE posts SET likes_count = likes_count + 1 WHERE id = ?', (post_id,))
+            cur.execute("UPDATE posts SET likes_count = likes_count + 1 WHERE id = %s", (post_id,))
         else:
-            db.execute('UPDATE posts SET dislikes_count = dislikes_count + 1 WHERE id = ?', (post_id,))
-        db.commit()
-        db.close()
+            cur.execute("UPDATE posts SET dislikes_count = dislikes_count + 1 WHERE id = %s", (post_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
         return {'action': 'added', 'new_type': reaction_type}
 
 def delete_post(post_id, user_id, is_admin):
-    db = get_db()
-    post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT * FROM posts WHERE id = %s", (post_id,))
+    post = cur.fetchone()
     if not post:
-        db.close()
+        cur.close()
+        conn.close()
         return False
     if post['user_id'] == user_id or is_admin:
-        db.execute('DELETE FROM posts WHERE id = ?', (post_id,))
-        db.commit()
-        db.close()
+        cur.execute("DELETE FROM posts WHERE id = %s", (post_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
         return True
-    db.close()
+    cur.close()
+    conn.close()
     return False
 
-# ---------- ФУНКЦИИ ДЛЯ НАГРАД (ИСПРАВЛЕНЫ) ----------
+# ---------- ФУНКЦИИ ДЛЯ НАГРАД (КВЕСТЫ) ----------
 def get_last_reward_time(user_id):
-    db = get_db()
-    row = db.execute('SELECT last_reward_time FROM users WHERE id = ?', (user_id,)).fetchone()
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT last_reward_time FROM users WHERE id = %s", (user_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
     return row['last_reward_time'] if row else None
 
 def can_claim_reward(user_id):
@@ -242,17 +293,55 @@ def can_claim_reward(user_id):
     try:
         last = float(last)
     except (TypeError, ValueError):
-        return True  # если данные повреждены, разрешаем
+        return True
     return (time.time() - last) >= 180
 
 def claim_reward(user_id):
     if not can_claim_reward(user_id):
         return False
-    db = get_db()
-    db.execute('UPDATE users SET balance = balance + 3.67, last_reward_time = ? WHERE id = ?', (time.time(), user_id))
-    db.commit()
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("UPDATE users SET balance = balance + 3.67, last_reward_time = %s WHERE id = %s", (time.time(), user_id))
+    conn.commit()
+    cur.close()
+    conn.close()
     return True
+
+# ---------- СТАТИСТИКА ПОЛЬЗОВАТЕЛЯ ----------
+def get_user_stats(user_id):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT COUNT(*) FROM posts WHERE user_id = %s", (user_id,))
+    posts_count = cur.fetchone()['count']
+    cur.execute("SELECT COALESCE(SUM(likes_count), 0) FROM posts WHERE user_id = %s", (user_id,))
+    likes_sum = cur.fetchone()['coalesce']
+    cur.execute("SELECT COALESCE(SUM(dislikes_count), 0) FROM posts WHERE user_id = %s", (user_id,))
+    dislikes_sum = cur.fetchone()['coalesce']
+    rating = likes_sum - dislikes_sum
+    cur.close()
+    conn.close()
+    return {
+        'posts_count': posts_count,
+        'likes_received': likes_sum,
+        'dislikes_received': dislikes_sum,
+        'rating': rating
+    }
+
+# ---------- ПОИСК ПОЛЬЗОВАТЕЛЕЙ ----------
+def search_users(query, limit=20):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute('''
+        SELECT id, username, display_name, description, balance 
+        FROM users 
+        WHERE username ILIKE %s OR display_name ILIKE %s
+        ORDER BY display_name
+        LIMIT %s
+    ''', ('%' + query + '%', '%' + query + '%', limit))
+    users = cur.fetchall()
+    cur.close()
+    conn.close()
+    return users
 
 # ---------- КОНТЕКСТНЫЙ ПРОЦЕССОР ----------
 @app.context_processor
@@ -262,8 +351,7 @@ def inject_user():
         return dict(current_user=user)
     return dict(current_user=None)
 
-# ---------- ДЕКОРАТОР ----------
-from functools import wraps
+# ---------- ДЕКОРАТОР ДЛЯ АДМИНОВ ----------
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -283,97 +371,7 @@ def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
-# ---------- ПОИСК ПОЛЬЗОВАТЕЛЕЙ ----------
-def search_users(query, limit=20):
-    db = get_db()
-    users = db.execute('''
-        SELECT id, username, display_name, description, balance 
-        FROM users 
-        WHERE username LIKE ? OR display_name LIKE ?
-        ORDER BY display_name
-        LIMIT ?
-    ''', ('%' + query + '%', '%' + query + '%', limit)).fetchall()
-    db.close()
-    return users
 
-# ---------- МАРШРУТЫ ДЛЯ ПОИСКА И ПРОФИЛЕЙ ----------
-@app.route('/users')
-def users():
-    if 'user_id' not in session:
-        flash('Пожалуйста, войдите.', 'error')
-        return redirect(url_for('login'))
-    query = request.args.get('q', '').strip()
-    results = []
-    if query:
-        results = search_users(query)
-    return render_template('users.html', query=query, results=results)
-
-@app.route('/user/<int:user_id>')
-def user_profile(user_id):
-    if 'user_id' not in session:
-        flash('Пожалуйста, войдите.', 'error')
-        return redirect(url_for('login'))
-    profile_user = get_user_by_id(user_id)
-    if not profile_user:
-        flash('Пользователь не найден.', 'error')
-        return redirect(url_for('users'))
-    posts = get_user_posts(user_id, current_user_id=session['user_id'])
-    stats = get_user_stats(user_id)  # <-- новая статистика
-    return render_template('user_profile.html', profile_user=profile_user, posts=posts, stats=stats)
-
-def get_user_stats(user_id):
-    """Возвращает статистику пользователя: кол-во постов, лайков, дизлайков, рейтинг."""
-    db = get_db()
-    # Количество постов
-    posts_count = db.execute('SELECT COUNT(*) FROM posts WHERE user_id = ?', (user_id,)).fetchone()[0]
-    # Суммарные лайки и дизлайки на всех постах пользователя
-    likes_sum = db.execute('SELECT SUM(likes_count) FROM posts WHERE user_id = ?', (user_id,)).fetchone()[0] or 0
-    dislikes_sum = db.execute('SELECT SUM(dislikes_count) FROM posts WHERE user_id = ?', (user_id,)).fetchone()[0] or 0
-    rating = likes_sum - dislikes_sum
-    db.close()
-    return {
-        'posts_count': posts_count,
-        'likes_received': likes_sum,
-        'dislikes_received': dislikes_sum,
-        'rating': rating
-    }
-@app.route('/send_money/<int:user_id>', methods=['POST'])
-def send_money(user_id):
-    if 'user_id' not in session:
-        flash('Пожалуйста, войдите.', 'error')
-        return redirect(url_for('login'))
-    sender_id = session['user_id']
-    amount_str = request.form.get('amount', '').strip()
-    try:
-        amount = float(amount_str.replace(',', '.'))
-        if amount <= 0:
-            raise ValueError
-    except:
-        flash('Введите корректную сумму.', 'error')
-        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
-
-    if sender_id == user_id:
-        flash('Нельзя отправить деньги самому себе.', 'error')
-        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
-
-    sender = get_user_by_id(sender_id)
-    receiver = get_user_by_id(user_id)
-    if not sender or not receiver:
-        flash('Пользователь не найден.', 'error')
-        return redirect(url_for('users'))
-
-    if sender['balance'] < amount:
-        flash('Недостаточно средств.', 'error')
-        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
-
-    db = get_db()
-    db.execute('UPDATE users SET balance = balance - ? WHERE id = ?', (amount, sender_id))
-    db.execute('UPDATE users SET balance = balance + ? WHERE id = ?', (amount, user_id))
-    db.commit()
-    db.close()
-
-    flash(f'Вы отправили ${amount:.2f} пользователю {receiver["display_name"]}.', 'success')
-    return redirect(url_for('user_profile', user_id=user_id))
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -392,13 +390,15 @@ def register():
             return render_template('register.html')
 
         hashed = hash_password(password)
-        db = get_db()
-        db.execute(
-            'INSERT INTO users (username, password_hash, display_name, description, balance, tilt_multiplier) VALUES (?, ?, ?, ?, ?, ?)',
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute(
+            "INSERT INTO users (username, password_hash, display_name, description, balance, tilt_multiplier) VALUES (%s, %s, %s, %s, %s, %s)",
             (username, hashed, display_name, description, 0.0, 0.30)
         )
-        db.commit()
-        db.close()
+        conn.commit()
+        cur.close()
+        conn.close()
 
         flash('Регистрация успешна! Теперь войдите.', 'success')
         return redirect(url_for('login'))
@@ -437,7 +437,7 @@ def dashboard():
 
     total_users = get_user_count() if user['is_admin'] == 1 else None
     my_posts = get_user_posts(user['id'], current_user_id=session['user_id'])
-    stats = get_user_stats(user['id'])  # <-- новая статистика
+    stats = get_user_stats(user['id'])
 
     return render_template('dashboard.html', user=user, total_users=total_users, my_posts=my_posts, stats=stats)
 
@@ -466,9 +466,11 @@ def create_post_route():
             return render_template('create_post.html')
 
         create_post(session['user_id'], content)
-        flash('Пост опубликован.', 'info')
+
         if claim_reward(session['user_id']):
-            flash('Вы получили $3.67 за квест!', 'success')
+            flash('Пост опубликован! Вы получили $3.67 за квест!', 'success')
+        else:
+            flash('Пост опубликован, но награда ещё не доступна (кулдаун 3 минуты).', 'info')
 
         return redirect(url_for('feed'))
 
@@ -543,6 +545,70 @@ def quests():
 
     return render_template('quests.html', user=user, can_claim=can_claim, remaining=remaining)
 
+@app.route('/users')
+def users():
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    query = request.args.get('q', '').strip()
+    results = []
+    if query:
+        results = search_users(query)
+    return render_template('users.html', query=query, results=results)
+
+@app.route('/user/<int:user_id>')
+def user_profile(user_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    profile_user = get_user_by_id(user_id)
+    if not profile_user:
+        flash('Пользователь не найден.', 'error')
+        return redirect(url_for('users'))
+    posts = get_user_posts(user_id, current_user_id=session['user_id'])
+    stats = get_user_stats(user_id)
+    return render_template('user_profile.html', profile_user=profile_user, posts=posts, stats=stats)
+
+@app.route('/send_money/<int:user_id>', methods=['POST'])
+def send_money(user_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    sender_id = session['user_id']
+    amount_str = request.form.get('amount', '').strip()
+    try:
+        amount = float(amount_str.replace(',', '.'))
+        if amount <= 0:
+            raise ValueError
+    except:
+        flash('Введите корректную сумму.', 'error')
+        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
+
+    if sender_id == user_id:
+        flash('Нельзя отправить деньги самому себе.', 'error')
+        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
+
+    sender = get_user_by_id(sender_id)
+    receiver = get_user_by_id(user_id)
+    if not sender or not receiver:
+        flash('Пользователь не найден.', 'error')
+        return redirect(url_for('users'))
+
+    if sender['balance'] < amount:
+        flash('Недостаточно средств.', 'error')
+        return redirect(request.referrer or url_for('user_profile', user_id=user_id))
+
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("UPDATE users SET balance = balance - %s WHERE id = %s", (amount, sender_id))
+    cur.execute("UPDATE users SET balance = balance + %s WHERE id = %s", (amount, user_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash(f'Вы отправили ${amount:.2f} пользователю {receiver["display_name"]}.', 'success')
+    return redirect(url_for('user_profile', user_id=user_id))
+
 # ---------- НАСТРОЙКИ ----------
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -568,10 +634,12 @@ def settings():
             flash('Неверный пароль.', 'error')
             return render_template('settings.html', user=user)
 
-        db = get_db()
-        db.execute('DELETE FROM users WHERE id = ?', (user['id'],))
-        db.commit()
-        db.close()
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute("DELETE FROM users WHERE id = %s", (user['id'],))
+        conn.commit()
+        cur.close()
+        conn.close()
 
         session.clear()
         flash('Ваш аккаунт был удалён.', 'info')
@@ -582,23 +650,27 @@ def settings():
         description = request.form.get('description', '').strip()
         new_password = request.form.get('new_password', '').strip()
         confirm_password = request.form.get('confirm_password', '').strip()
-        tilt_multiplier = request.form.get('tilt_multiplier', 0.30)
+        tilt_multiplier = request.form.get('tilt_multiplier')
 
         if not display_name:
             flash('Отображаемое имя не может быть пустым.', 'error')
             return render_template('settings.html', user=user)
 
-        try:
-            tilt_multiplier = float(tilt_multiplier.replace(',', '.'))
-            if tilt_multiplier < 0 or tilt_multiplier > 2:
-                raise ValueError
-        except:
-            flash('Некорректное значение 3D-эффекта (от 0 до 2).', 'error')
-            return render_template('settings.html', user=user)
+        if tilt_multiplier is None or tilt_multiplier == '':
+            tilt_multiplier = 0.30
+        else:
+            try:
+                tilt_multiplier = float(tilt_multiplier.replace(',', '.'))
+                if tilt_multiplier < 0 or tilt_multiplier > 2:
+                    raise ValueError
+            except ValueError:
+                flash('Некорректное значение 3D-эффекта (от 0 до 2).', 'error')
+                return render_template('settings.html', user=user)
 
-        db = get_db()
-        db.execute(
-            'UPDATE users SET display_name = ?, description = ?, tilt_multiplier = ? WHERE id = ?',
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute(
+            "UPDATE users SET display_name = %s, description = %s, tilt_multiplier = %s WHERE id = %s",
             (display_name, description, tilt_multiplier, user['id'])
         )
 
@@ -610,10 +682,11 @@ def settings():
                 flash('Пароли не совпадают.', 'error')
                 return render_template('settings.html', user=user)
             hashed = hash_password(new_password)
-            db.execute('UPDATE users SET password_hash = ? WHERE id = ?', (hashed, user['id']))
+            cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hashed, user['id']))
 
-        db.commit()
-        db.close()
+        conn.commit()
+        cur.close()
+        conn.close()
 
         flash('Настройки обновлены!', 'success')
         return redirect(url_for('settings'))
@@ -636,10 +709,12 @@ def admin_posts():
 @app.route('/admin/post/delete/<int:post_id>', methods=['POST'])
 @admin_required
 def admin_delete_post(post_id):
-    db = get_db()
-    db.execute('DELETE FROM posts WHERE id = ?', (post_id,))
-    db.commit()
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("DELETE FROM posts WHERE id = %s", (post_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
     flash('Пост удалён администратором.', 'success')
     return redirect(request.referrer or url_for('admin_posts'))
 
@@ -667,13 +742,15 @@ def admin_edit_user(user_id):
             flash('Некорректный формат баланса.', 'error')
             return render_template('admin_edit.html', user=user)
 
-        db = get_db()
-        db.execute(
-            'UPDATE users SET display_name = ?, description = ?, balance = ?, is_admin = ? WHERE id = ?',
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute(
+            "UPDATE users SET display_name = %s, description = %s, balance = %s, is_admin = %s WHERE id = %s",
             (display_name, description, balance, is_admin, user_id)
         )
-        db.commit()
-        db.close()
+        conn.commit()
+        cur.close()
+        conn.close()
         flash('Данные пользователя обновлены.', 'success')
         return redirect(url_for('admin_panel'))
 
@@ -686,10 +763,12 @@ def admin_delete_user(user_id):
         flash('Нельзя удалить самого себя.', 'error')
         return redirect(url_for('admin_panel'))
 
-    db = get_db()
-    db.execute('DELETE FROM users WHERE id = ?', (user_id,))
-    db.commit()
-    db.close()
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
     flash('Пользователь удалён.', 'success')
     return redirect(url_for('admin_panel'))
 
@@ -700,4 +779,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0",debug=False, port=10000)
+    app.run(debug=True, port=5001)
