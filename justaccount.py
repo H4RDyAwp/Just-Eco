@@ -139,21 +139,24 @@ def init_db():
         # Добавляем начальные товары, если таблица пуста
         cur.execute("SELECT COUNT(*) FROM shop_items")
         count = cur.fetchone()['count']
-        if count == 0:
-            items = [
-                ('Золотой текст', 'Золотистый цвет текста в постах', 5.00, 'post_decoration', '🌟', 'gold-text', None),
-                ('Неоновый пост', 'Переливающаяся обводка и лёгкий фон', 7.00, 'post_decoration', '💡', 'neon-post', None),
-                ('Рамка "Космос"', 'Космическая рамка для профиля', 10.00, 'profile_frame', '🌌', 'cosmic-frame', None),
-                ('Рамка "Классика"', 'Элегантная золотая рамка', 6.00, 'profile_frame', '✨', 'classic-frame', None),
-            ]
-            for name, desc, price, category, icon, css_class, emoji in items:
+        items = [
+            ('Золотой текст', 'Золотистый цвет текста в постах', 5.00, 'post_decoration', '🌟', 'gold-text', None),
+            ('Неоновый пост', 'Переливающаяся обводка и лёгкий фон', 7.00, 'post_decoration', '💡', 'neon-post', None),
+            ('Рамка "Космос"', 'Космическая рамка для профиля', 10.00, 'profile_frame', '🌌', 'cosmic-frame', None),
+            ('Рамка "Классика"', 'Элегантная золотая рамка', 6.00, 'profile_frame', '✨', 'classic-frame', None),
+            ('Bold', 'Жирный шрифт для постов', 6.70, 'post_decoration', '💪', 'bold-text', None),
+            ('Matrix Background', 'Анимированный фон в стиле Матрицы', 12.00, 'post_decoration', '💻', 'matrix-bg', None),
+            ('Green Text', 'Неоновый зелёный текст', 5.50, 'post_decoration', '🌿', 'green-text', None),
+        ]
+
+        for name, desc, price, category, icon, css_class, emoji in items:
+            cur.execute("SELECT id FROM shop_items WHERE css_class = %s", (css_class,))
+            if not cur.fetchone():
                 cur.execute(
                     "INSERT INTO shop_items (name, description, price, category, icon, css_class, emoji) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     (name, desc, price, category, icon, css_class, emoji)
                 )
-            conn.commit()
-            print("Товары добавлены в магазин.")
-
+        conn.commit()
     except Exception as e:
         conn.rollback()
         print(f"Ошибка инициализации БД: {e}")

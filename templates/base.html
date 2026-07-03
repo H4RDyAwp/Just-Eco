@@ -916,16 +916,60 @@
             }
 
             .neon-post {
-                background: rgba(255, 0, 200, 0.08) !important;
+                /* Основной фон – берём из переменной темы, чтобы подстраивался под свет/темноту */
+                background: 
+                    linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) border-box,
+                    var(--card-bg) padding-box;
                 border: 2px solid transparent;
-                border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1;
-                animation: neonBorder 3s linear infinite;
                 border-radius: 1.5rem;
+                background-origin: border-box;
+                background-clip: padding-box, border-box;
+                background-size: 300% 300%;
+                animation: neonMove 4s linear infinite;
             }
-            @keyframes neonBorder {
-                0% { border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; }
-                50% { border-image: linear-gradient(225deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; }
-                100% { border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; }
+
+            @keyframes neonMove {
+                0%   { background-position: 0% 0%; }
+                25%  { background-position: 100% 0%; }
+                50%  { background-position: 100% 100%; }
+                75%  { background-position: 0% 100%; }
+                100% { background-position: 0% 0%; }
+            }
+                        /* Украшения для постов — новые */
+            .bold-text {
+                font-weight: 700 !important;
+            }
+
+            .green-text {
+                color: #00ff00 !important;
+            }
+
+            .matrix-bg {
+                background: linear-gradient(180deg, #000 0%, #0a0a0a 100%) !important;
+                background-size: 100% 2px !important;
+                animation: matrixScroll 0.6s linear infinite;
+                color: #00ff00 !important;
+                border: 1px solid #00ff00 !important;
+                box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            }
+            @keyframes matrixScroll {
+                0% { background-position: 0 0; }
+                100% { background-position: 0 4px; }
+            }
+            .matrix-bg::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: repeating-linear-gradient(0deg, rgba(0,255,0,0.03) 0px, rgba(0,255,0,0.03) 2px, transparent 2px, transparent 4px);
+                pointer-events: none;
+                animation: matrixLines 0.6s linear infinite;
+            }
+            @keyframes matrixLines {
+                0% { transform: translateY(0); }
+                100% { transform: translateY(4px); }
             }
         }
 
