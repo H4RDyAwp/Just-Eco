@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль {{ profile_user.display_name }}{% endblock %}
+{% block page_title %}{{ profile_user.display_name }}{% endblock %}
+{% block sub_title %}@{{ profile_user.username }}{% endblock %}
+
+{% block content %}
+<!-- Основная сетка -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <!-- Левая колонка: информация о пользователе -->
+    <div
+        style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border);">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div
+                style="width: 60px; height: 60px; border-radius: 50%; background: var(--text-primary); color: var(--bg-1); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700;">
+                {{ profile_user.display_name[0]|upper }}
+            </div>
+            <div>
+                <h3 style="color: var(--text-primary);">{{ profile_user.display_name }}</h3>
+                <p style="color: var(--text-muted);">@{{ profile_user.username }}</p>
+            </div>
+        </div>
+        <div class="user-info">
+            <p><strong>Описание:</strong> {{ profile_user.description or 'Не указано' }}</p>
+            <p><strong>Баланс:</strong> <span class="balance">${{ "%.2f"|format(profile_user.balance) }}</span></p>
+            <p><strong>Дата регистрации:</strong> {{ profile_user.created_at[:10] }}</p>
+            {% if profile_user.is_admin == 1 %}
+            <p style="color: #4ade80;">🔑 Администратор</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Правая колонка: статистика пользователя -->
+    <div
+        style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border);">
+        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">📊 Статистика</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div
+                style="text-align: center; padding: 0.5rem; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--card-border);">
+                <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-primary);">{{ stats.posts_count }}
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Постов</div>
+            </div>
+            <div
+                style="text-align: center; padding: 0.5rem; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--card-border);">
+                <div style="font-size: 1.8rem; font-weight: 700; color: #4ade80;">{{ stats.likes_received }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">❤️ Лайков</div>
+            </div>
+            <div
+                style="text-align: center; padding: 0.5rem; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--card-border);">
+                <div style="font-size: 1.8rem; font-weight: 700; color: #ef4444;">{{ stats.dislikes_received }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">👎 Дизлайков</div>
+            </div>
+            <div
+                style="text-align: center; padding: 0.5rem; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--card-border);">
+                <div style="font-size: 1.8rem; font-weight: 700; color: #fbbf24;">{{ stats.rating }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">⭐ Рейтинг</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Отправка денег (если не свой профиль) -->
+{% if profile_user.id != session.user_id %}
+<div
+    style="margin-top: 1.5rem; background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border);">
+    <h4 style="color: var(--text-secondary); margin-bottom: 0.5rem;">💸 Отправить деньги</h4>
+    <form method="POST" action="{{ url_for('send_money', user_id=profile_user.id) }}"
+        style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+            <label for="amount" style="font-size: 0.8rem; color: var(--text-secondary);">Сумма в $</label>
+            <input type="text" id="amount" name="amount" placeholder="0.00" required />
+        </div>
+        <button type="submit" class="btn-submit" style="margin-bottom: 0.2rem;">Отправить</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- Посты пользователя -->
+<div style="margin-top: 2rem;">
+    <h3 style="color: var(--text-secondary); margin-bottom: 1rem;">📝 Посты {{ profile_user.display_name }}</h3>
+    {% if posts %}
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        {% for post in posts %}
+        <div class="post-card">
+            <p style="color: var(--text-secondary); word-wrap: break-word;">{{ post.content }}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                <span style="color: var(--text-muted); font-size: 0.75rem;">{{ post.created_at[:16] }}</span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <span style="color: var(--text-secondary);">❤️ {{ post.likes_count }}</span>
+                    <span style="color: var(--text-secondary);">👎 {{ post.dislikes_count }}</span>
+                    {% if current_user and (current_user.id == post.user_id or current_user.is_admin == 1) %}
+                    <form method="POST" action="{{ url_for('delete_post_route', post_id=post.id) }}"
+                        style="display: inline-block;" onsubmit="return confirm('Удалить этот пост?');">
+                        <button type="submit" class="ctrl-btn"
+                            style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; background: #ef4444; color: white;">🗑️</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: var(--text-muted);">У пользователя пока нет постов.</p>
+    {% endif %}
+</div>
+
+<div style="margin-top: 1.5rem;">
+    <a href="{{ url_for('users') }}" class="ctrl-btn theme-btn" style="text-decoration: none; padding: 0.5rem 1.2rem;">←
+        Назад к поиску</a>
+</div>
+{% endblock %}

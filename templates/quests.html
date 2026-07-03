@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Квесты — Just ID{% endblock %}
+{% block page_title %}Квесты{% endblock %}
+{% block sub_title %}Зарабатывай, создавая посты!{% endblock %}
+
+{% block content %}
+<div style="display: grid; gap: 1.5rem;">
+    <div
+        style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border);">
+        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">📝 Ежедневный квест</h3>
+        <p style="color: var(--text-primary); font-size: 1.1rem;">
+            Создай пост и получи <strong style="color: #4ade80;">$3.67</strong> на баланс!
+        </p>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">
+            Кулдаун: <strong>3 минуты</strong> между наградами.
+        </p>
+    </div>
+
+    <div
+        style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border);">
+        <h4 style="color: var(--text-secondary); margin-bottom: 0.5rem;">💰 Ваш баланс</h4>
+        <p style="font-size: 2rem; font-weight: 700; color: #4ade80;">${{ "%.2f"|format(user.balance) }}</p>
+    </div>
+
+    <div
+        style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border);">
+        <h4 style="color: var(--text-secondary); margin-bottom: 0.5rem;">⏳ Статус награды</h4>
+        {% if can_claim %}
+        <p style="color: #4ade80; font-weight: 600;">✅ Вы можете получить награду за новый пост!</p>
+        <a href="{{ url_for('create_post_route') }}" class="btn-submit"
+            style="margin-top: 0.8rem; text-decoration: none;">➕ Создать пост</a>
+        {% else %}
+        <p style="color: #fbbf24; font-weight: 600;">⏳ Награда будет доступна через:</p>
+        <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem;">
+            <span id="timer" style="font-size: 1.8rem; font-weight: 700; color: var(--text-primary);">--:--</span>
+            <span style="color: var(--text-muted);">минут</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.5rem;">
+            Создайте пост, когда таймер истечёт, чтобы получить $3.67.
+        </p>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 0.5rem;">
+        <a href="{{ url_for('feed') }}" class="ctrl-btn theme-btn"
+            style="text-decoration: none; padding: 0.5rem 1.2rem;">📰 Перейти в ленту</a>
+        <a href="{{ url_for('dashboard') }}" class="ctrl-btn theme-btn"
+            style="text-decoration: none; padding: 0.5rem 1.2rem;">📊 На дашборд</a>
+    </div>
+</div>
+
+<!-- Скрипт для таймера обратного отсчёта -->
+{% if not can_claim and remaining > 0 %}
+<script>
+    (function () {
+    let remaining = {{ remaining| int}};
+    const timerElement = document.getElementById('timer');
+
+    function updateTimer() {
+        if (remaining <= 0) {
+            timerElement.textContent = '00:00';
+            // Можно обновить страницу или показать кнопку, но для простоты оставим.
+            return;
+        }
+        const minutes = Math.floor(remaining / 60);
+        const seconds = Math.floor(remaining % 60);
+        timerElement.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        remaining--;
+        setTimeout(updateTimer, 1000);
+    }
+    updateTimer();
+    }) ();
+</script>
+{% endif %}
+{% endblock %}
