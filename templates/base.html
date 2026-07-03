@@ -940,6 +940,8 @@
             <a href="{{ url_for('quests') }}">Квесты</a>
             <a href="{{ url_for('users') }}">Поиск</a>
             <a href="{{ url_for('settings') }}">Настройки</a>
+            <a href="{{ url_for('shop') }}">Магазин</a>
+            <a href="{{ url_for('inventory') }}">Инвентарь</a>
             {% if current_user and current_user.is_admin == 1 %}
             <a href="{{ url_for('admin_panel') }}">Админка</a>
             <a href="{{ url_for('admin_posts') }}">Упр. постами</a>
@@ -962,7 +964,7 @@
                 </div>
                 <div class="badge">
                     <span class="dot"></span>
-                    {% block badge %}V 1.2{% endblock %}
+                    {% block badge %}V 1.3{% endblock %}
                 </div>
             </div>
 

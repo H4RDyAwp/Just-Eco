@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Магазин украшений{% endblock %}
+{% block page_title %}Магазин украшений{% endblock %}
+{% block sub_title %}Тратьте баланс на стиль{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <p style="color: var(--text-secondary);">Ваш баланс: <span class="balance">${{ "%.2f"|format(user.balance) }}</span>
+    </p>
+</div>
+
+<div style="display: grid; gap: 2rem;">
+    <!-- Украшения для постов -->
+    <div>
+        <h3 style="color: var(--text-secondary); margin-bottom: 1rem;">✍️ Украшения для постов</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
+            {% for item in items if item.category == 'post_decoration' %}
+            <div
+                style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border); text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">{{ item.icon or '🎨' }}</div>
+                <h4 style="color: var(--text-primary);">{{ item.name }}</h4>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">{{ item.description }}</p>
+                <p style="color: var(--text-secondary); font-weight: 600; margin: 0.5rem 0;">${{
+                    "%.2f"|format(item.price) }}</p>
+                {% if item.id in owned_ids %}
+                <span style="color: #4ade80;">✅ Приобретено</span>
+                {% else %}
+                <form method="POST" action="{{ url_for('buy_item', item_id=item.id) }}">
+                    <button type="submit" class="btn-submit" style="width: 100%;">Купить</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Рамки для профиля -->
+    <div>
+        <h3 style="color: var(--text-secondary); margin-bottom: 1rem;">🖼️ Рамки для профиля</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
+            {% for item in items if item.category == 'profile_frame' %}
+            <div
+                style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border); text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">{{ item.icon or '🖼️' }}</div>
+                <h4 style="color: var(--text-primary);">{{ item.name }}</h4>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">{{ item.description }}</p>
+                <p style="color: var(--text-secondary); font-weight: 600; margin: 0.5rem 0;">${{
+                    "%.2f"|format(item.price) }}</p>
+                {% if item.id in owned_ids %}
+                <span style="color: #4ade80;">✅ Приобретено</span>
+                {% else %}
+                <form method="POST" action="{{ url_for('buy_item', item_id=item.id) }}">
+                    <button type="submit" class="btn-submit" style="width: 100%;">Купить</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -9,20 +9,26 @@ import psycopg2.extras
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from dotenv import load_dotenv
 
-load_dotenv()  # загружаем переменные из .env
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
 
-# ---------- ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ ----------
+# ---------- ХЕШИРОВАНИЕ ----------
+def hash_password(password):
+    salt = os.urandom(16).hex()
+    return salt + ':' + hashlib.sha256((salt + password).encode()).hexdigest()
+
+def verify_password(password, hashed):
+    salt, h = hashed.split(':')
+    return h == hashlib.sha256((salt + password).encode()).hexdigest()
+
+# ---------- ПОДКЛЮЧЕНИЕ К БАЗЕ ----------
 def get_db_connection():
-    """Возвращает соединение с PostgreSQL, используя DATABASE_URL или отдельные переменные."""
     database_url = os.getenv('DATABASE_URL')
     if database_url:
-        # Если есть DATABASE_URL – используем её
         conn = psycopg2.connect(database_url, sslmode='require')
     else:
-        # Иначе собираем из отдельных переменных (для локальной разработки)
         conn = psycopg2.connect(
             dbname=os.getenv('DB_NAME', 'justid'),
             user=os.getenv('DB_USER', 'postgres'),
@@ -35,24 +41,14 @@ def get_db_connection():
     return conn
 
 def get_cursor(conn):
-    """Возвращает курсор с доступом по имени колонки."""
     return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-# ---------- ХЕШИРОВАНИЕ ПАРОЛЕЙ ----------
-def hash_password(password):
-    salt = os.urandom(16).hex()
-    return salt + ':' + hashlib.sha256((salt + password).encode()).hexdigest()
-
-def verify_password(password, hashed):
-    salt, h = hashed.split(':')
-    return h == hashlib.sha256((salt + password).encode()).hexdigest()
 
 # ---------- ИНИЦИАЛИЗАЦИЯ БАЗЫ ----------
 def init_db():
     conn = get_db_connection()
     cur = get_cursor(conn)
     try:
-        # Таблица users
+        # Пользователи
         cur.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -67,7 +63,7 @@ def init_db():
                 last_reward_time DOUBLE PRECISION
             )
         ''')
-        # Таблица posts
+        # Посты
         cur.execute('''
             CREATE TABLE IF NOT EXISTS posts (
                 id SERIAL PRIMARY KEY,
@@ -78,7 +74,7 @@ def init_db():
                 dislikes_count INTEGER DEFAULT 0
             )
         ''')
-        # Таблица reactions (лайки/дизлайки)
+        # Реакции
         cur.execute('''
             CREATE TABLE IF NOT EXISTS reactions (
                 id SERIAL PRIMARY KEY,
@@ -88,9 +84,34 @@ def init_db():
                 UNIQUE(user_id, post_id)
             )
         ''')
+        # Магазин
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS shop_items (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                price REAL NOT NULL,
+                category TEXT NOT NULL CHECK (category IN ('post_decoration', 'profile_frame')),
+                icon TEXT,
+                css_class TEXT,
+                emoji TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        ''')
+        # Инвентарь
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS user_inventory (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                item_id INTEGER NOT NULL REFERENCES shop_items(id) ON DELETE CASCADE,
+                equipped BOOLEAN DEFAULT FALSE,
+                purchased_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id, item_id)
+            )
+        ''')
         conn.commit()
 
-        # Создаём администратора, если его нет
+        # Создаём администратора
         cur.execute("SELECT * FROM users WHERE username = 'admin'")
         admin = cur.fetchone()
         if not admin:
@@ -101,6 +122,25 @@ def init_db():
             )
             conn.commit()
             print("Администратор создан: admin / admin123")
+
+        # Добавляем начальные товары, если таблица пуста
+        cur.execute("SELECT COUNT(*) FROM shop_items")
+        count = cur.fetchone()['count']
+        if count == 0:
+            items = [
+                ('Золотой текст', 'Золотистый цвет текста в постах', 5.00, 'post_decoration', '🌟', 'gold-text', None),
+                ('Неоновый пост', 'Яркий неоновый фон для поста', 7.00, 'post_decoration', '💡', 'neon-post', None),
+                ('Рамка "Космос"', 'Космическая рамка для профиля', 10.00, 'profile_frame', '🌌', 'cosmic-frame', None),
+                ('Рамка "Классика"', 'Элегантная золотая рамка', 6.00, 'profile_frame', '✨', 'classic-frame', None),
+            ]
+            for name, desc, price, category, icon, css_class, emoji in items:
+                cur.execute(
+                    "INSERT INTO shop_items (name, description, price, category, icon, css_class, emoji) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (name, desc, price, category, icon, css_class, emoji)
+                )
+            conn.commit()
+            print("Товары добавлены в магазин.")
+
     except Exception as e:
         conn.rollback()
         print(f"Ошибка инициализации БД: {e}")
@@ -110,7 +150,7 @@ def init_db():
 
 init_db()
 
-# ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
+# ---------- ФУНКЦИИ ПОЛЬЗОВАТЕЛЕЙ ----------
 def get_user_by_username(username):
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -147,7 +187,7 @@ def get_user_count():
     conn.close()
     return count
 
-# ---------- ФУНКЦИИ ДЛЯ ПОСТОВ ----------
+# ---------- ПОСТЫ ----------
 def create_post(user_id, content):
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -232,7 +272,6 @@ def toggle_reaction(user_id, post_id, reaction_type):
 
     if existing:
         if existing['reaction_type'] == reaction_type:
-            # Удаляем реакцию
             cur.execute("DELETE FROM reactions WHERE user_id = %s AND post_id = %s", (user_id, post_id))
             if reaction_type == 1:
                 cur.execute("UPDATE posts SET likes_count = likes_count - 1 WHERE id = %s", (post_id,))
@@ -243,7 +282,6 @@ def toggle_reaction(user_id, post_id, reaction_type):
             conn.close()
             return {'action': 'removed', 'new_type': None}
         else:
-            # Меняем реакцию
             cur.execute("UPDATE reactions SET reaction_type = %s WHERE user_id = %s AND post_id = %s", (reaction_type, user_id, post_id))
             if reaction_type == 1:
                 cur.execute("UPDATE posts SET dislikes_count = dislikes_count - 1, likes_count = likes_count + 1 WHERE id = %s", (post_id,))
@@ -283,7 +321,7 @@ def delete_post(post_id, user_id, is_admin):
     conn.close()
     return False
 
-# ---------- ФУНКЦИИ ДЛЯ НАГРАД (КВЕСТЫ) ----------
+# ---------- НАГРАДЫ ----------
 def get_last_reward_time(user_id):
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -314,7 +352,7 @@ def claim_reward(user_id):
     conn.close()
     return True
 
-# ---------- СТАТИСТИКА ПОЛЬЗОВАТЕЛЯ ----------
+# ---------- СТАТИСТИКА ----------
 def get_user_stats(user_id):
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -334,7 +372,7 @@ def get_user_stats(user_id):
         'rating': rating
     }
 
-# ---------- ПОИСК ПОЛЬЗОВАТЕЛЕЙ ----------
+# ---------- ПОИСК ----------
 def search_users(query, limit=20):
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -350,6 +388,123 @@ def search_users(query, limit=20):
     conn.close()
     return users
 
+# ---------- МАГАЗИН И ИНВЕНТАРЬ ----------
+def get_shop_items(category=None):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    if category:
+        cur.execute("SELECT * FROM shop_items WHERE category = %s ORDER BY price", (category,))
+    else:
+        cur.execute("SELECT * FROM shop_items ORDER BY category, price")
+    items = cur.fetchall()
+    cur.close()
+    conn.close()
+    return items
+
+def get_user_inventory(user_id, category=None):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    if category:
+        cur.execute('''
+            SELECT shop_items.*, user_inventory.equipped
+            FROM user_inventory
+            JOIN shop_items ON user_inventory.item_id = shop_items.id
+            WHERE user_inventory.user_id = %s AND shop_items.category = %s
+        ''', (user_id, category))
+    else:
+        cur.execute('''
+            SELECT shop_items.*, user_inventory.equipped
+            FROM user_inventory
+            JOIN shop_items ON user_inventory.item_id = shop_items.id
+            WHERE user_inventory.user_id = %s
+        ''', (user_id,))
+    items = cur.fetchall()
+    cur.close()
+    conn.close()
+    return items
+
+def get_equipped_items(user_id, category=None):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    if category:
+        cur.execute('''
+            SELECT shop_items.*
+            FROM user_inventory
+            JOIN shop_items ON user_inventory.item_id = shop_items.id
+            WHERE user_inventory.user_id = %s AND user_inventory.equipped = TRUE AND shop_items.category = %s
+        ''', (user_id, category))
+    else:
+        cur.execute('''
+            SELECT shop_items.*
+            FROM user_inventory
+            JOIN shop_items ON user_inventory.item_id = shop_items.id
+            WHERE user_inventory.user_id = %s AND user_inventory.equipped = TRUE
+        ''', (user_id,))
+    items = cur.fetchall()
+    cur.close()
+    conn.close()
+    return items
+
+def get_item_by_id(item_id):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT * FROM shop_items WHERE id = %s", (item_id,))
+    item = cur.fetchone()
+    cur.close()
+    conn.close()
+    return item
+
+def purchase_item(user_id, item_id):
+    item = get_item_by_id(item_id)
+    if not item:
+        return False, "Товар не найден."
+    user = get_user_by_id(user_id)
+    if user['balance'] < item['price']:
+        return False, "Недостаточно средств."
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute("SELECT * FROM user_inventory WHERE user_id = %s AND item_id = %s", (user_id, item_id))
+    existing = cur.fetchone()
+    if existing:
+        cur.close()
+        conn.close()
+        return False, "Товар уже приобретён."
+    cur.execute("UPDATE users SET balance = balance - %s WHERE id = %s", (item['price'], user_id))
+    cur.execute("INSERT INTO user_inventory (user_id, item_id) VALUES (%s, %s)", (user_id, item_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return True, "Украшение куплено!"
+
+def toggle_equip_item(user_id, item_id):
+    """Включает/выключает украшение. В одной категории может быть активно только одно."""
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    item = get_item_by_id(item_id)
+    if not item:
+        cur.close()
+        conn.close()
+        return False, "Товар не найден."
+    cur.execute("SELECT equipped FROM user_inventory WHERE user_id = %s AND item_id = %s", (user_id, item_id))
+    inv = cur.fetchone()
+    if not inv:
+        cur.close()
+        conn.close()
+        return False, "У вас нет этого украшения."
+    if inv['equipped']:
+        cur.execute("UPDATE user_inventory SET equipped = FALSE WHERE user_id = %s AND item_id = %s", (user_id, item_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True, "Украшение отключено."
+    # Отключаем другие активные в той же категории
+    cur.execute("UPDATE user_inventory SET equipped = FALSE WHERE user_id = %s AND item_id IN (SELECT id FROM shop_items WHERE category = %s)", (user_id, item['category']))
+    cur.execute("UPDATE user_inventory SET equipped = TRUE WHERE user_id = %s AND item_id = %s", (user_id, item_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return True, "Украшение применено!"
+
 # ---------- КОНТЕКСТНЫЙ ПРОЦЕССОР ----------
 @app.context_processor
 def inject_user():
@@ -358,7 +513,7 @@ def inject_user():
         return dict(current_user=user)
     return dict(current_user=None)
 
-# ---------- ДЕКОРАТОР ДЛЯ АДМИНОВ ----------
+# ---------- ДЕКОРАТОР ----------
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -446,7 +601,14 @@ def dashboard():
     my_posts = get_user_posts(user['id'], current_user_id=session['user_id'])
     stats = get_user_stats(user['id'])
 
-    return render_template('dashboard.html', user=user, total_users=total_users, my_posts=my_posts, stats=stats)
+    # Получаем активные украшения для постов (просто список, чтобы знать стиль)
+    equipped_post_decoration = get_equipped_items(user['id'], 'post_decoration')
+    profile_frame = get_equipped_items(user['id'], 'profile_frame')
+    post_style = equipped_post_decoration[0] if equipped_post_decoration else None
+
+    return render_template('dashboard.html', user=user, total_users=total_users,
+                           my_posts=my_posts, stats=stats,
+                           post_style=post_style, profile_frame=profile_frame)
 
 @app.route('/feed')
 def feed():
@@ -455,6 +617,8 @@ def feed():
         return redirect(url_for('login'))
 
     posts = get_posts(limit=50, user_id=session['user_id'])
+    # Для каждого поста определяем, есть ли украшение у автора (можно потом расширить)
+    # Пока просто передаём список постов
     return render_template('feed.html', posts=posts)
 
 @app.route('/create_post', methods=['GET', 'POST'])
@@ -574,7 +738,13 @@ def user_profile(user_id):
         return redirect(url_for('users'))
     posts = get_user_posts(user_id, current_user_id=session['user_id'])
     stats = get_user_stats(user_id)
-    return render_template('user_profile.html', profile_user=profile_user, posts=posts, stats=stats)
+    # Украшения пользователя
+    equipped_post_decoration = get_equipped_items(user_id, 'post_decoration')
+    profile_frame = get_equipped_items(user_id, 'profile_frame')
+    post_style = equipped_post_decoration[0] if equipped_post_decoration else None
+    frame = profile_frame[0] if profile_frame else None
+    return render_template('user_profile.html', profile_user=profile_user, posts=posts, stats=stats,
+                           post_style=post_style, frame=frame)
 
 @app.route('/send_money/<int:user_id>', methods=['POST'])
 def send_money(user_id):
@@ -615,6 +785,45 @@ def send_money(user_id):
 
     flash(f'Вы отправили ${amount:.2f} пользователю {receiver["display_name"]}.', 'success')
     return redirect(url_for('user_profile', user_id=user_id))
+
+# ---------- МАГАЗИН ----------
+@app.route('/shop')
+def shop():
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    user = get_user_by_id(session['user_id'])
+    items = get_shop_items()
+    inventory = get_user_inventory(user['id'])
+    owned_ids = [item['id'] for item in inventory]
+    return render_template('shop.html', user=user, items=items, owned_ids=owned_ids)
+
+@app.route('/buy/<int:item_id>', methods=['POST'])
+def buy_item(item_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    success, message = purchase_item(session['user_id'], item_id)
+    flash(message, 'success' if success else 'error')
+    return redirect(url_for('shop'))
+
+@app.route('/inventory')
+def inventory():
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    user = get_user_by_id(session['user_id'])
+    inventory_items = get_user_inventory(user['id'])
+    return render_template('inventory.html', user=user, inventory=inventory_items)
+
+@app.route('/equip/<int:item_id>', methods=['POST'])
+def equip_item(item_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    success, message = toggle_equip_item(session['user_id'], item_id)
+    flash(message, 'success' if success else 'error')
+    return redirect(url_for('inventory'))
 
 # ---------- НАСТРОЙКИ ----------
 @app.route('/settings', methods=['GET', 'POST'])

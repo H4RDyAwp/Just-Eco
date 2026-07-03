@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Мой инвентарь{% endblock %}
+{% block page_title %}Мой инвентарь{% endblock %}
+{% block sub_title %}Управляйте своими украшениями{% endblock %}
+
+{% block content %}
+<div style="display: grid; gap: 2rem;">
+    <!-- Украшения для постов -->
+    <div>
+        <h3 style="color: var(--text-secondary); margin-bottom: 1rem;">✍️ Украшения для постов</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
+            {% for item in inventory if item.category == 'post_decoration' %}
+            <div
+                style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border); text-align: center;">
+                <div style="font-size: 3rem;">{{ item.icon or '🎨' }}</div>
+                <h4 style="color: var(--text-primary);">{{ item.name }}</h4>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">{{ item.description }}</p>
+                <form method="POST" action="{{ url_for('equip_item', item_id=item.id) }}" style="margin-top: 0.5rem;">
+                    <button type="submit" class="btn-submit"
+                        style="width: 100%; background: {% if item.equipped %}#4ade80{% else %}var(--btn-bg){% endif %}; color: {% if item.equipped %}white{% else %}var(--text-primary){% endif %};">
+                        {% if item.equipped %}✅ Применено{% else %}Применить{% endif %}
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Рамки для профиля -->
+    <div>
+        <h3 style="color: var(--text-secondary); margin-bottom: 1rem;">🖼️ Рамки для профиля</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
+            {% for item in inventory if item.category == 'profile_frame' %}
+            <div
+                style="background: var(--card-bg); border-radius: 1.5rem; padding: 1.5rem; border: 1px solid var(--card-border); text-align: center;">
+                <div style="font-size: 3rem;">{{ item.icon or '🖼️' }}</div>
+                <h4 style="color: var(--text-primary);">{{ item.name }}</h4>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">{{ item.description }}</p>
+                <form method="POST" action="{{ url_for('equip_item', item_id=item.id) }}" style="margin-top: 0.5rem;">
+                    <button type="submit" class="btn-submit"
+                        style="width: 100%; background: {% if item.equipped %}#4ade80{% else %}var(--btn-bg){% endif %}; color: {% if item.equipped %}white{% else %}var(--text-primary){% endif %};">
+                        {% if item.equipped %}✅ Применено{% else %}Применить{% endif %}
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
