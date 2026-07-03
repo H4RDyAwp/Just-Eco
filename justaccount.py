@@ -43,12 +43,11 @@ def get_db_connection():
 def get_cursor(conn):
     return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-# ---------- ИНИЦИАЛИЗАЦИЯ БАЗЫ ----------
 def init_db():
     conn = get_db_connection()
     cur = get_cursor(conn)
     try:
-        # Пользователи
+        # Таблица пользователей
         cur.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -63,7 +62,7 @@ def init_db():
                 last_reward_time DOUBLE PRECISION
             )
         ''')
-        # Посты (с заголовком и картинкой)
+        # Посты
         cur.execute('''
             CREATE TABLE IF NOT EXISTS posts (
                 id SERIAL PRIMARY KEY,
@@ -76,17 +75,6 @@ def init_db():
                 dislikes_count INTEGER DEFAULT 0
             )
         ''')
-        # Добавляем колонки title и image_url, если их нет
-        try:
-            cur.execute("ALTER TABLE posts ADD COLUMN title TEXT")
-            conn.commit()
-        except psycopg2.errors.DuplicateColumn:
-            pass  # колонка уже существует
-        try:
-            cur.execute("ALTER TABLE posts ADD COLUMN image_url TEXT")
-            conn.commit()
-        except psycopg2.errors.DuplicateColumn:
-            pass  # колонка уже существует
         # Реакции
         cur.execute('''
             CREATE TABLE IF NOT EXISTS reactions (
@@ -126,8 +114,7 @@ def init_db():
 
         # Создаём администратора
         cur.execute("SELECT * FROM users WHERE username = 'admin'")
-        admin = cur.fetchone()
-        if not admin:
+        if not cur.fetchone():
             hashed = hash_password('admin123')
             cur.execute(
                 "INSERT INTO users (username, password_hash, display_name, description, balance, is_admin, tilt_multiplier) VALUES (%s, %s, %s, %s, %s, %s, %s)",
@@ -136,9 +123,18 @@ def init_db():
             conn.commit()
             print("Администратор создан: admin / admin123")
 
-        # Добавляем начальные товары, если таблица пуста
-        cur.execute("SELECT COUNT(*) FROM shop_items")
-        count = cur.fetchone()['count']
+        # Добавляем колонки, если их нет (каждая операция с отдельным коммитом/откатом)
+        for col in ['title', 'image_url']:
+            try:
+                cur.execute(f"ALTER TABLE posts ADD COLUMN {col} TEXT")
+                conn.commit()
+            except psycopg2.errors.DuplicateColumn:
+                conn.rollback()
+            except Exception as e:
+                conn.rollback()
+                print(f"Ошибка при добавлении колонки {col}: {e}")
+
+        # Добавляем товары, которых ещё нет
         items = [
             ('Золотой текст', 'Золотистый цвет текста в постах', 5.00, 'post_decoration', '🌟', 'gold-text', None),
             ('Неоновый пост', 'Переливающаяся обводка и лёгкий фон', 7.00, 'post_decoration', '💡', 'neon-post', None),
@@ -150,13 +146,18 @@ def init_db():
         ]
 
         for name, desc, price, category, icon, css_class, emoji in items:
-            cur.execute("SELECT id FROM shop_items WHERE css_class = %s", (css_class,))
-            if not cur.fetchone():
-                cur.execute(
-                    "INSERT INTO shop_items (name, description, price, category, icon, css_class, emoji) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                    (name, desc, price, category, icon, css_class, emoji)
-                )
-        conn.commit()
+            try:
+                cur.execute("SELECT id FROM shop_items WHERE css_class = %s", (css_class,))
+                if not cur.fetchone():
+                    cur.execute(
+                        "INSERT INTO shop_items (name, description, price, category, icon, css_class, emoji) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (name, desc, price, category, icon, css_class, emoji)
+                    )
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                print(f"Ошибка при добавлении товара {name}: {e}")
+
     except Exception as e:
         conn.rollback()
         print(f"Ошибка инициализации БД: {e}")

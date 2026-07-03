@@ -8,8 +8,7 @@
 <div style="display: flex; flex-direction: column; gap: 1.5rem;">
     {% if posts %}
     {% for post in posts %}
-    <div class="post-card {% for style in post.styles %}{{ style }} {% endfor %}"
-        style="{% if 'neon-post' in post.styles %}background: rgba(255, 0, 200, 0.08); border: 2px solid transparent; border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; animation: neonBorder 3s linear infinite; border-radius: 1.5rem;{% endif %}">
+    <div class="post-card {% for style in post.styles %}{{ style }} {% endfor %}">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
             <div>
                 <strong style="color: var(--text-primary);">{{ post.display_name }}</strong>
@@ -54,9 +53,7 @@
                 onerror="this.style.display='none'" />
         </div>
         {% endif %}
-        <p
-            style="margin-top: 0.5rem; line-height: 1.5; word-wrap: break-word;
-                       {% if 'gold-text' in post.styles %}color: #ffd700 !important;{% else %}color: var(--text-secondary);{% endif %}">
+        <p style="margin-top: 0.5rem; line-height: 1.5; word-wrap: break-word;">
             {{ post.content }}
         </p>
     </div>

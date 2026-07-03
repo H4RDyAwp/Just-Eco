@@ -915,24 +915,34 @@
                 color: #ffd700 !important;
             }
 
+            /* Улучшенная обводка через псевдоэлемент */
             .neon-post {
-                /* Основной фон – берём из переменной темы, чтобы подстраивался под свет/темноту */
-                background: 
-                    linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) border-box,
-                    var(--card-bg) padding-box;
-                border: 2px solid transparent;
+                position: relative;
+                background: var(--card-bg);
                 border-radius: 1.5rem;
-                background-origin: border-box;
-                background-clip: padding-box, border-box;
-                background-size: 300% 300%;
-                animation: neonMove 4s linear infinite;
+                overflow: hidden;
+                z-index: 1;
             }
-
+            .neon-post::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border-radius: 1.5rem;
+                padding: 2px;
+                background: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff);
+                background-size: 300% 300%;
+                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                -webkit-mask-composite: xor;
+                mask-composite: exclude;
+                animation: neonMove 3s linear infinite;
+                pointer-events: none;
+                z-index: -1;
+            }
             @keyframes neonMove {
-                0%   { background-position: 0% 0%; }
-                25%  { background-position: 100% 0%; }
-                50%  { background-position: 100% 100%; }
-                75%  { background-position: 0% 100%; }
+                0% { background-position: 0% 0%; }
+                25% { background-position: 100% 0%; }
+                50% { background-position: 100% 100%; }
+                75% { background-position: 0% 100%; }
                 100% { background-position: 0% 0%; }
             }
                         /* Украшения для постов — новые */
