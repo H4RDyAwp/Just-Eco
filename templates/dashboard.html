@@ -16,7 +16,8 @@
             <p><strong>Логин:</strong> @{{ user.username }}</p>
             <p><strong>Описание:</strong> {{ user.description or 'Не указано' }}</p>
             <p><strong>Баланс:</strong> <span class="balance">${{ "%.2f"|format(user.balance) }}</span></p>
-            <p><strong>Дата регистрации:</strong> {{ user.created_at[:10] }}</p>
+            <p><strong>Дата регистрации:</strong> {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}
+            </p>
             {% if user.is_admin == 1 %}
             <p style="color: #4ade80;">🔑 Администратор</p>
             {% endif %}
@@ -80,7 +81,8 @@
         <div class="post-card">
             <p style="color: var(--text-secondary); word-wrap: break-word;">{{ post.content }}</p>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                <span style="color: var(--text-muted); font-size: 0.75rem;">{{ post.created_at[:16] }}</span>
+                <span style="color: var(--text-muted); font-size: 0.75rem;">{{ post.created_at.strftime('%Y-%m-%d
+                    %H:%M') if post.created_at else '' }}</span>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <span style="color: var(--text-secondary);">❤️ {{ post.likes_count }}</span>
                     <span style="color: var(--text-secondary);">👎 {{ post.dislikes_count }}</span>
