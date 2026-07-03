@@ -620,7 +620,8 @@ def dashboard():
     post_styles = get_equipped_items(user['id'], 'post_decoration')
     profile_frame = get_equipped_items(user['id'], 'profile_frame')
     frame = profile_frame[0] if profile_frame else None
-
+    post_styles = get_equipped_items(user['id'], 'post_decoration')
+    print("ACTIVE STYLES:", post_styles)  # <-- добавьте эту строку
     return render_template('dashboard.html',
                            user=user,
                            total_users=total_users,
