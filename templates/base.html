@@ -10,14 +10,14 @@
         rel="stylesheet" />
     <style>
         /* ============================================================
-                   1.  CSS ПЕРЕМЕННЫЕ (THEMING)
-                   ============================================================ */
+           1.  CSS ПЕРЕМЕННЫЕ (THEMING)
+           ============================================================ */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+    
         :root {
             --bg-1: #0f0c29;
             --bg-2: #302b63;
@@ -41,7 +41,7 @@
             --btn-hover-bg: rgba(255, 255, 255, 0.15);
             --navbar-bg: rgba(10, 10, 20, 0.55);
         }
-
+    
         body.light-mode {
             --bg-1: #e8e6f0;
             --bg-2: #d9d6e6;
@@ -65,7 +65,7 @@
             --btn-hover-bg: rgba(0, 0, 0, 0.12);
             --navbar-bg: rgba(240, 240, 250, 0.6);
         }
-
+    
         body.dart-mode {
             --bg-1: #0f0c29;
             --bg-2: #302b63;
@@ -89,7 +89,7 @@
             --btn-hover-bg: rgba(255, 255, 255, 0.15);
             --navbar-bg: rgba(10, 10, 30, 0.55);
         }
-
+    
         body.dark-mode {
             --bg-1: #0a0a0a;
             --bg-2: #111111;
@@ -113,31 +113,31 @@
             --btn-hover-bg: rgba(255, 255, 255, 0.08);
             --navbar-bg: rgba(0, 0, 0, 0.6);
         }
-
+    
         /* ============================================================
-                   2.  ЦВЕТОВЫЕ ПРЕСЕТЫ (орбы)
-                   ============================================================ */
+           2.  ЦВЕТОВЫЕ ПРЕСЕТЫ (орбы)
+           ============================================================ */
         body.theme-cool {
             --orb-1: rgba(120, 80, 255, 0.35);
             --orb-2: rgba(0, 200, 255, 0.25);
             --orb-3: rgba(100, 100, 255, 0.20);
         }
-
+    
         body.theme-warm {
             --orb-1: rgba(255, 120, 50, 0.35);
             --orb-2: rgba(255, 80, 80, 0.25);
             --orb-3: rgba(255, 200, 50, 0.20);
         }
-
+    
         body.theme-neon {
             --orb-1: rgba(0, 255, 200, 0.30);
             --orb-2: rgba(255, 0, 200, 0.25);
             --orb-3: rgba(0, 200, 255, 0.25);
         }
-
+    
         /* ============================================================
-                   3.  БАЗОВЫЕ СТИЛИ
-                   ============================================================ */
+           3.  БАЗОВЫЕ СТИЛИ
+           ============================================================ */
         body {
             min-height: 100vh;
             display: flex;
@@ -151,11 +151,11 @@
             perspective: 1200px;
             cursor: default;
         }
-
+    
         body.no-scroll {
             overflow: hidden;
         }
-
+    
         #spotlight {
             position: fixed;
             inset: 0;
@@ -168,10 +168,10 @@
             transition: background 0.3s ease;
             will-change: background;
         }
-
+    
         /* ============================================================
-                   4.  ФОН И ОРБЫ
-                   ============================================================ */
+           4.  ФОН И ОРБЫ
+           ============================================================ */
         .bg {
             position: fixed;
             inset: 0;
@@ -180,7 +180,7 @@
             overflow: hidden;
             transition: background 0.8s ease;
         }
-
+    
         .bg::before {
             content: '';
             position: absolute;
@@ -193,24 +193,24 @@
             transition: background 0.8s ease;
             transform: scale(1.8);
         }
-
+    
         @keyframes bgShift {
             0% {
                 transform: scale(1.8) rotate(0deg);
                 opacity: 0.7;
             }
-
+    
             50% {
                 transform: scale(2.0) rotate(3deg);
                 opacity: 1;
             }
-
+    
             100% {
                 transform: scale(1.6) rotate(-2deg);
                 opacity: 0.8;
             }
         }
-
+    
         .orb {
             position: absolute;
             border-radius: 50%;
@@ -219,7 +219,7 @@
             animation: orbFloat 16s ease-in-out infinite alternate;
             transition: background 0.8s ease;
         }
-
+    
         .orb--1 {
             width: 800px;
             height: 800px;
@@ -228,7 +228,7 @@
             background: radial-gradient(circle, var(--orb-1), transparent);
             animation-duration: 20s;
         }
-
+    
         .orb--2 {
             width: 700px;
             height: 700px;
@@ -238,7 +238,7 @@
             animation-duration: 22s;
             animation-delay: -4s;
         }
-
+    
         .orb--3 {
             width: 600px;
             height: 600px;
@@ -249,28 +249,28 @@
             animation-delay: -8s;
             opacity: 0.4;
         }
-
+    
         @keyframes orbFloat {
             0% {
                 transform: translate(0, 0) scale(1);
             }
-
+    
             33% {
                 transform: translate(60px, -50px) scale(1.1);
             }
-
+    
             66% {
                 transform: translate(-40px, 60px) scale(0.9);
             }
-
+    
             100% {
                 transform: translate(30px, -20px) scale(1.05);
             }
         }
-
+    
         /* ============================================================
-                   5.  СТЕКЛЯННЫЙ ТОП-БАР (плавающий, с закруглениями)
-                   ============================================================ */
+           5.  СТЕКЛЯННЫЙ ТОП-БАР
+           ============================================================ */
         .navbar {
             position: fixed;
             top: 1.2rem;
@@ -296,7 +296,7 @@
             gap: 0.5rem;
             transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
         }
-
+    
         .navbar:hover {
             border-color: rgba(255, 255, 255, 0.18);
             box-shadow:
@@ -304,7 +304,7 @@
                 var(--glass-inset),
                 inset 0 1px 0 rgba(255, 255, 255, 0.20);
         }
-
+    
         .navbar::before {
             content: '';
             position: absolute;
@@ -324,16 +324,11 @@
             opacity: 0.6;
             transition: opacity 0.5s ease;
         }
-
+    
         .navbar:hover::before {
             opacity: 1;
         }
-        .post-card img {
-            border-radius: 1rem;
-            max-width: 100%;
-            height: auto;
-            object-fit: cover;
-        }
+    
         .navbar .nav-brand {
             font-weight: 700;
             font-size: 1.2rem;
@@ -342,14 +337,14 @@
             letter-spacing: -0.02em;
             opacity: 0.9;
         }
-
+    
         .navbar .nav-links {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             gap: 0.6rem;
         }
-
+    
         .navbar .nav-links a {
             color: var(--text-secondary);
             text-decoration: none;
@@ -361,20 +356,20 @@
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
         }
-
+    
         .navbar .nav-links a:hover {
             color: var(--text-primary);
             background: rgba(255, 255, 255, 0.08);
         }
-
+    
         .navbar .nav-links a.active {
             color: var(--text-primary);
             background: rgba(255, 255, 255, 0.12);
         }
-
+    
         /* ============================================================
-                   6.  СТЕКЛЯННАЯ КАРТОЧКА
-                   ============================================================ */
+           6.  СТЕКЛЯННАЯ КАРТОЧКА
+           ============================================================ */
         .glass {
             position: relative;
             z-index: 1;
@@ -395,7 +390,7 @@
             transform-style: preserve-3d;
             will-change: transform;
         }
-
+    
         .glass:hover {
             border-color: rgba(255, 255, 255, 0.18);
             box-shadow:
@@ -403,7 +398,7 @@
                 var(--glass-inset),
                 inset 0 1px 0 rgba(255, 255, 255, 0.20);
         }
-
+    
         .glass::before {
             content: '';
             position: absolute;
@@ -423,11 +418,11 @@
             opacity: 0.7;
             transition: opacity 0.5s ease;
         }
-
+    
         .glass:hover::before {
             opacity: 1;
         }
-
+    
         .glass::after {
             content: '';
             position: absolute;
@@ -444,7 +439,7 @@
             opacity: 0.8;
             transition: opacity 0.6s ease;
         }
-
+    
         .glass .gloss-bottom {
             position: absolute;
             bottom: 6%;
@@ -461,14 +456,14 @@
             transition: opacity 0.6s ease;
             z-index: 1;
         }
-
+    
         .glass:hover .gloss-bottom {
             opacity: 0.9;
         }
-
+    
         /* ============================================================
-                   7.  КОНТЕНТ
-                   ============================================================ */
+           7.  КОНТЕНТ
+           ============================================================ */
         .content {
             position: relative;
             z-index: 2;
@@ -478,7 +473,7 @@
             gap: 2rem;
             transition: color 0.4s ease;
         }
-
+    
         .header {
             display: flex;
             align-items: center;
@@ -486,7 +481,7 @@
             flex-wrap: wrap;
             gap: 1rem;
         }
-
+    
         .badge {
             display: inline-flex;
             align-items: center;
@@ -502,7 +497,7 @@
             backdrop-filter: blur(8px);
             transition: background 0.3s, color 0.3s;
         }
-
+    
         .badge .dot {
             width: 8px;
             height: 8px;
@@ -511,21 +506,21 @@
             display: inline-block;
             animation: pulseDot 2s ease-in-out infinite;
         }
-
+    
         @keyframes pulseDot {
-
+    
             0%,
             100% {
                 opacity: 1;
                 transform: scale(1);
             }
-
+    
             50% {
                 opacity: 0.4;
                 transform: scale(0.8);
             }
         }
-
+    
         .title-group h1 {
             font-size: clamp(2.2rem, 6vw, 4rem);
             font-weight: 700;
@@ -542,21 +537,21 @@
             background-clip: text;
             animation: shimmer 6s ease-in-out infinite alternate;
         }
-
+    
         @keyframes shimmer {
             0% {
                 background-position: 0% 50%;
             }
-
+    
             50% {
                 background-position: 100% 50%;
             }
-
+    
             100% {
                 background-position: 0% 50%;
             }
         }
-
+    
         .title-group .sub {
             font-size: 1.05rem;
             font-weight: 400;
@@ -564,12 +559,12 @@
             margin-top: 0.3rem;
             letter-spacing: 0.01em;
         }
-
+    
         /* ===== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ ФОРМ И КАРТОЧЕК ===== */
         .form-group {
             margin-bottom: 1.2rem;
         }
-
+    
         .form-group label {
             display: block;
             font-size: 0.85rem;
@@ -577,7 +572,7 @@
             color: var(--text-secondary);
             margin-bottom: 0.3rem;
         }
-
+    
         .form-group input,
         .form-group textarea {
             width: 100%;
@@ -591,18 +586,18 @@
             transition: border 0.25s;
             backdrop-filter: blur(4px);
         }
-
+    
         .form-group input:focus,
         .form-group textarea:focus {
             outline: none;
             border-color: var(--text-secondary);
         }
-
+    
         .form-group textarea {
             resize: vertical;
             min-height: 80px;
         }
-
+    
         .btn-submit {
             display: inline-flex;
             align-items: center;
@@ -619,17 +614,17 @@
             font-family: inherit;
             text-decoration: none;
         }
-
+    
         .btn-submit:hover {
             transform: scale(1.02);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
         }
-
+    
         body.light-mode .btn-submit {
             background: #1a1a2e;
             color: #fff;
         }
-
+    
         .flash-messages {
             margin-bottom: 1rem;
             padding: 0.8rem 1.2rem;
@@ -637,50 +632,50 @@
             background: rgba(255, 255, 255, 0.05);
             border-left: 4px solid;
         }
-
+    
         .flash-messages.error {
             border-color: #ef4444;
             color: #ef4444;
         }
-
+    
         .flash-messages.success {
             border-color: #4ade80;
             color: #4ade80;
         }
-
+    
         .flash-messages.info {
             border-color: #60a5fa;
             color: #60a5fa;
         }
-
+    
         .auth-links {
             margin-top: 1rem;
             font-size: 0.9rem;
             color: var(--text-secondary);
         }
-
+    
         .auth-links a {
             color: var(--text-primary);
             text-decoration: none;
             font-weight: 500;
         }
-
+    
         .auth-links a:hover {
             text-decoration: underline;
         }
-
+    
         .balance {
             font-size: 1.8rem;
             font-weight: 700;
             color: #4ade80;
         }
-
+    
         .user-info {
             display: flex;
             flex-direction: column;
             gap: 0.3rem;
         }
-
+    
         .footer {
             display: flex;
             flex-direction: column;
@@ -689,7 +684,7 @@
             border-top: 1px solid var(--glass-border);
             transition: border-color 0.3s;
         }
-
+    
         .footer-top {
             display: flex;
             align-items: center;
@@ -697,20 +692,20 @@
             flex-wrap: wrap;
             gap: 1rem;
         }
-
+    
         .footer .meta {
             font-size: 0.85rem;
             color: var(--text-muted);
             font-weight: 400;
         }
-
+    
         .controls {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             flex-wrap: wrap;
         }
-
+    
         .ctrl-btn {
             display: inline-flex;
             align-items: center;
@@ -728,24 +723,24 @@
             -webkit-backdrop-filter: blur(4px);
             font-family: inherit;
         }
-
+    
         .ctrl-btn:hover {
             background: var(--btn-hover-bg);
             transform: scale(1.08);
             border-color: var(--text-secondary);
         }
-
+    
         .ctrl-btn.active {
             background: var(--text-primary);
             color: var(--bg-1);
             border-color: var(--text-primary);
         }
-
+    
         body.light-mode .ctrl-btn.active {
             background: #1a1a2e;
             color: #fff;
         }
-
+    
         .ctrl-btn.theme-btn {
             width: auto;
             padding: 0 0.8rem;
@@ -755,7 +750,7 @@
             letter-spacing: 0.02em;
             gap: 0.3rem;
         }
-
+    
         /* Стили для постов */
         .post-card {
             background: var(--card-bg);
@@ -766,12 +761,12 @@
             -webkit-backdrop-filter: blur(8px);
             transition: all 0.25s ease;
         }
-
+    
         .post-card:hover {
             background: rgba(255, 255, 255, 0.06);
             border-color: var(--text-secondary);
         }
-
+    
         /* Слайдер 3D множителя */
         .slider-wrap {
             display: flex;
@@ -780,7 +775,7 @@
             width: 100%;
             padding: 0.25rem 0;
         }
-
+    
         .slider-wrap label {
             font-size: 0.75rem;
             font-weight: 500;
@@ -788,7 +783,7 @@
             letter-spacing: 0.02em;
             white-space: nowrap;
         }
-
+    
         .slider-wrap input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
@@ -800,7 +795,7 @@
             transition: background 0.3s;
             cursor: pointer;
         }
-
+    
         .slider-wrap input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -813,11 +808,11 @@
             transition: 0.15s;
             cursor: pointer;
         }
-
+    
         .slider-wrap input[type="range"]::-webkit-slider-thumb:hover {
             transform: scale(1.15);
         }
-
+    
         .slider-wrap input[type="range"]::-moz-range-thumb {
             width: 16px;
             height: 16px;
@@ -827,7 +822,7 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             cursor: pointer;
         }
-
+    
         .slider-value {
             font-size: 0.8rem;
             font-weight: 600;
@@ -836,10 +831,10 @@
             text-align: center;
             font-variant-numeric: tabular-nums;
         }
-
+    
         /* ============================================================
-                   8.  АДАПТИВНОСТЬ
-                   ============================================================ */
+           8.  АДАПТИВНОСТЬ
+           ============================================================ */
         @media (max-width: 768px) {
             .navbar {
                 top: 0.8rem;
@@ -850,22 +845,22 @@
                 align-items: stretch;
                 gap: 0.3rem;
             }
-
+    
             .navbar .nav-links {
                 justify-content: center;
                 gap: 0.3rem;
             }
-
+    
             .navbar .nav-links a {
                 font-size: 0.75rem;
                 padding: 0.2rem 0.5rem;
             }
-
+    
             body {
                 padding-top: 6.5rem;
             }
         }
-
+    
         @media (max-width: 480px) {
             .navbar {
                 top: 0.5rem;
@@ -873,173 +868,133 @@
                 padding: 0.4rem 0.6rem;
                 border-radius: 1.5rem;
             }
-
+    
             .navbar .nav-links a {
                 font-size: 0.7rem;
                 padding: 0.15rem 0.4rem;
             }
-
+    
             body {
                 padding-top: 5.5rem;
             }
         }
-
+    
         @media (max-width: 600px) {
             .glass {
                 padding: 1.75rem 1.5rem;
                 border-radius: 2rem;
             }
-
+    
             .glass::before {
                 border-radius: 2rem;
             }
-
+    
             .header {
                 flex-direction: column;
                 align-items: flex-start;
             }
-
+    
             .footer-top {
                 flex-direction: column;
                 align-items: stretch;
             }
-
+    
             .controls {
                 justify-content: flex-start;
             }
-
+    
             .slider-wrap {
                 flex-wrap: wrap;
             }
-            .gold-text {
-                color: #ffd700 !important;
-            }
-
-            /* Улучшенная обводка через псевдоэлемент */
-            .neon-post {
-                position: relative;
-                background: var(--card-bg);
-                border-radius: 1.5rem;
-                overflow: hidden;
-                z-index: 1;
-            }
-            .neon-post::before {
-                content: '';
-                position: absolute;
-                inset: 0;
-                border-radius: 1.5rem;
-                padding: 2px;
-                background: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff);
-                background-size: 300% 300%;
-                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-                -webkit-mask-composite: xor;
-                mask-composite: exclude;
-                animation: neonMove 3s linear infinite;
-                pointer-events: none;
-                z-index: -1;
-            }
-            @keyframes neonMove {
-                0% { background-position: 0% 0%; }
-                25% { background-position: 100% 0%; }
-                50% { background-position: 100% 100%; }
-                75% { background-position: 0% 100%; }
-                100% { background-position: 0% 0%; }
-            }
-                        /* Украшения для постов — новые */
-            .bold-text {
-                font-weight: 700 !important;
-            }
-
-            .green-text {
-                color: #00ff00 !important;
-            }
-
-            .matrix-bg {
-                background: linear-gradient(180deg, #000 0%, #0a0a0a 100%) !important;
-                background-size: 100% 2px !important;
-                animation: matrixScroll 0.6s linear infinite;
-                color: #00ff00 !important;
-                border: 1px solid #00ff00 !important;
-                box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-            }
-            @keyframes matrixScroll {
-                0% { background-position: 0 0; }
-                100% { background-position: 0 4px; }
-            }
-            .matrix-bg::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: repeating-linear-gradient(0deg, rgba(0,255,0,0.03) 0px, rgba(0,255,0,0.03) 2px, transparent 2px, transparent 4px);
-                pointer-events: none;
-                animation: matrixLines 0.6s linear infinite;
-            }
-            @keyframes matrixLines {
-                0% { transform: translateY(0); }
-                100% { transform: translateY(4px); }
-            }
-            /* ===== ПРИНУДИТЕЛЬНЫЕ СТИЛИ ДЛЯ УКРАШЕНИЙ ===== */
-            .gold-text {
-                color: #ffd700 !important;
-            }
-            .bold-text {
-                font-weight: 700 !important;
-            }
-            .green-text {
-                color: #00ff00 !important;
-            }
-            .neon-post {
-                background: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) border-box !important;
-                border: 2px solid transparent !important;
-                border-radius: 1.5rem !important;
-                background-origin: border-box !important;
-                background-clip: padding-box, border-box !important;
-                background-size: 300% 300% !important;
-                animation: neonMove 4s linear infinite !important;
-            }
-            @keyframes neonMove {
-                0%   { background-position: 0% 0%; }
-                25%  { background-position: 100% 0%; }
-                50%  { background-position: 100% 100%; }
-                75%  { background-position: 0% 100%; }
-                100% { background-position: 0% 0%; }
-            }
-            .matrix-bg {
-                background: #0a0a0a !important;
-                color: #00ff00 !important;
-                border: 1px solid #00ff00 !important;
-                box-shadow: 0 0 20px rgba(0, 255, 0, 0.2) !important;
-                position: relative;
-                overflow: hidden;
-            }
-            .matrix-bg::before {
-                content: '' !important;
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                background: repeating-linear-gradient(0deg, rgba(0,255,0,0.03) 0px, rgba(0,255,0,0.03) 2px, transparent 2px, transparent 4px) !important;
-                pointer-events: none !important;
-                animation: matrixScroll 0.6s linear infinite !important;
-            }
-            @keyframes matrixScroll {
-                0% { transform: translateY(0); }
-                100% { transform: translateY(4px); }
-            }
-            .matrix-bg * {
-                position: relative;
-                z-index: 1;
-            }
         }
-
+    
         @media (max-width: 400px) {
             .glass {
                 padding: 1.25rem 1rem;
             }
+        }
+    
+        /* ============================================================
+           9.  УКРАШЕНИЯ ДЛЯ ПОСТОВ (ПРИНУДИТЕЛЬНЫЕ)
+           ============================================================ */
+        .gold-text {
+            color: #ffd700 !important;
+        }
+    
+        .bold-text {
+            font-weight: 700 !important;
+        }
+    
+        .green-text {
+            color: #00ff00 !important;
+        }
+    
+        .neon-post {
+            background: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) border-box !important;
+            border: 2px solid transparent !important;
+            border-radius: 1.5rem !important;
+            background-origin: border-box !important;
+            background-clip: padding-box, border-box !important;
+            background-size: 300% 300% !important;
+            animation: neonMove 4s linear infinite !important;
+        }
+    
+        @keyframes neonMove {
+            0% {
+                background-position: 0% 0%;
+            }
+    
+            25% {
+                background-position: 100% 0%;
+            }
+    
+            50% {
+                background-position: 100% 100%;
+            }
+    
+            75% {
+                background-position: 0% 100%;
+            }
+    
+            100% {
+                background-position: 0% 0%;
+            }
+        }
+    
+        .matrix-bg {
+            background: #0a0a0a !important;
+            color: #00ff00 !important;
+            border: 1px solid #00ff00 !important;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2) !important;
+            position: relative;
+            overflow: hidden;
+        }
+    
+        .matrix-bg::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: repeating-linear-gradient(0deg, rgba(0, 255, 0, 0.03) 0px, rgba(0, 255, 0, 0.03) 2px, transparent 2px, transparent 4px) !important;
+            pointer-events: none !important;
+            animation: matrixScroll 0.6s linear infinite !important;
+        }
+    
+        @keyframes matrixScroll {
+            0% {
+                transform: translateY(0);
+            }
+    
+            100% {
+                transform: translateY(4px);
+            }
+        }
+    
+        .matrix-bg * {
+            position: relative;
+            z-index: 1;
         }
     </style>
 </head>
