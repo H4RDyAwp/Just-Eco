@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Управление постами{% endblock %}
-{% block page_title %}Админ-панель — Посты{% endblock %}
+{% block title %}Админ-панель — Управление постами{% endblock %}
+{% block page_title %}Управление постами{% endblock %}
 {% block sub_title %}Все посты пользователей{% endblock %}
 
 {% block content %}
@@ -25,11 +25,12 @@
                 <strong style="color: var(--text-primary);">{{ post.display_name }}</strong>
                 <span style="color: var(--text-muted); font-size: 0.8rem;">@{{ post.username }}</span>
                 <span style="color: var(--text-muted); font-size: 0.7rem; margin-left: 0.5rem;">
-                    {{ post.created_at[:16] }}
+                    {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}
                 </span>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <span style="color: var(--text-secondary);">❤️ {{ post.likes_count }}</span>
+                <span style="color: var(--text-secondary);">👎 {{ post.dislikes_count }}</span>
                 <form method="POST" action="{{ url_for('admin_delete_post', post_id=post.id) }}"
                     style="display: inline-block;" onsubmit="return confirm('Удалить этот пост?');">
                     <button type="submit" class="ctrl-btn"
