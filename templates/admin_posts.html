@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Админ-панель — Управление постами{% endblock %}
-{% block page_title %}Управление постами{% endblock %}
+{% block title %}Управление постами{% endblock %}
+{% block page_title %}Админ-панель — Посты{% endblock %}
 {% block sub_title %}Все посты пользователей{% endblock %}
 
 {% block content %}
@@ -19,7 +19,8 @@
 {% if posts %}
 <div style="display: flex; flex-direction: column; gap: 1.5rem;">
     {% for post in posts %}
-    <div class="post-card">
+    <div class="post-card {% for style in post.styles %}{{ style }} {% endfor %}"
+        style="{% if 'neon-post' in post.styles %}background: rgba(255, 0, 200, 0.08); border: 2px solid transparent; border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; animation: neonBorder 3s linear infinite; border-radius: 1.5rem;{% endif %}">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
             <div>
                 <strong style="color: var(--text-primary);">{{ post.display_name }}</strong>
@@ -27,10 +28,11 @@
                 <span style="color: var(--text-muted); font-size: 0.7rem; margin-left: 0.5rem;">
                     {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}
                 </span>
+                <span style="color: var(--text-muted); font-size: 0.7rem; margin-left: 0.5rem;">
+                    ❤️ {{ post.likes_count }} 👎 {{ post.dislikes_count }}
+                </span>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <span style="color: var(--text-secondary);">❤️ {{ post.likes_count }}</span>
-                <span style="color: var(--text-secondary);">👎 {{ post.dislikes_count }}</span>
                 <form method="POST" action="{{ url_for('admin_delete_post', post_id=post.id) }}"
                     style="display: inline-block;" onsubmit="return confirm('Удалить этот пост?');">
                     <button type="submit" class="ctrl-btn"
@@ -38,7 +40,9 @@
                 </form>
             </div>
         </div>
-        <p style="margin-top: 0.5rem; color: var(--text-secondary); line-height: 1.5; word-wrap: break-word;">
+        <p
+            style="margin-top: 0.5rem; line-height: 1.5; word-wrap: break-word; 
+                       {% if 'gold-text' in post.styles %}color: #ffd700 !important;{% else %}color: var(--text-secondary);{% endif %}">
             {{ post.content }}
         </p>
     </div>

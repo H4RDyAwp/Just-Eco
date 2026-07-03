@@ -582,7 +582,6 @@ def login():
         return redirect(url_for('dashboard'))
 
     return render_template('login.html')
-
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
@@ -599,15 +598,24 @@ def dashboard():
     my_posts = get_user_posts(user['id'], current_user_id=session['user_id'])
     stats = get_user_stats(user['id'])
 
-    # Получаем активные украшения для постов (просто список, чтобы знать стиль)
-    equipped_post_decoration = get_equipped_items(user['id'], 'post_decoration')
-    profile_frame = get_equipped_items(user['id'], 'profile_frame')
-    post_style = equipped_post_decoration[0] if equipped_post_decoration else None
+    # Получаем активные украшения для постов пользователя
+    equipped_post_decorations = get_equipped_items(user['id'], 'post_decoration')
+    post_styles = [item['css_class'] for item in equipped_post_decorations if item['css_class']]
 
-    return render_template('dashboard.html', user=user, total_users=total_users,
-                           my_posts=my_posts, stats=stats,
-                           post_style=post_style, profile_frame=profile_frame)
+    # Получаем активную рамку профиля (только одну)
+    equipped_profile_frames = get_equipped_items(user['id'], 'profile_frame')
+    profile_frame = equipped_profile_frames[0] if equipped_profile_frames else None
 
+    # Для каждого поста из my_posts можно также добавить стили автора, но они уже у текущего пользователя
+    # Можно просто передать post_styles и profile_frame
+
+    return render_template('dashboard.html', 
+                           user=user, 
+                           total_users=total_users, 
+                           my_posts=my_posts, 
+                           stats=stats,
+                           post_styles=post_styles,
+                           profile_frame=profile_frame)
 @app.route('/feed')
 def feed():
     if 'user_id' not in session:
@@ -936,6 +944,25 @@ def admin_panel():
 @admin_required
 def admin_posts():
     posts = get_posts(limit=100, user_id=None)
+    # Получаем активные украшения для постов авторов
+    user_ids = set(post['user_id'] for post in posts)
+    user_styles = {}
+    if user_ids:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute('''
+            SELECT ui.user_id, si.css_class
+            FROM user_inventory ui
+            JOIN shop_items si ON ui.item_id = si.id
+            WHERE ui.user_id = ANY(%s) AND ui.equipped = TRUE AND si.category = 'post_decoration'
+        ''', (list(user_ids),))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        for row in rows:
+            user_styles.setdefault(row['user_id'], []).append(row['css_class'])
+    for post in posts:
+        post['styles'] = user_styles.get(post['user_id'], [])
     return render_template('admin_posts.html', posts=posts)
 
 @app.route('/admin/post/delete/<int:post_id>', methods=['POST'])
