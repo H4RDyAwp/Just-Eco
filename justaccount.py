@@ -43,7 +43,6 @@ def get_db_connection():
 def get_cursor(conn):
     return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-# ---------- ИНИЦИАЛИЗАЦИЯ БАЗЫ ----------
 def init_db():
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -63,6 +62,7 @@ def init_db():
                 last_reward_time DOUBLE PRECISION
             )
         ''')
+        
         # Посты (с заголовком и картинкой)
         cur.execute('''
             CREATE TABLE IF NOT EXISTS posts (
@@ -76,17 +76,10 @@ def init_db():
                 dislikes_count INTEGER DEFAULT 0
             )
         ''')
-        # Добавляем колонки title и image_url, если их нет
-        try:
-            cur.execute("ALTER TABLE posts ADD COLUMN title TEXT")
-            conn.commit()
-        except psycopg2.errors.DuplicateColumn:
-            pass
-        try:
-            cur.execute("ALTER TABLE posts ADD COLUMN image_url TEXT")
-            conn.commit()
-        except psycopg2.errors.DuplicateColumn:
-            pass
+        
+        # БЕЗОПАСНОЕ добавление колонок (работает в PostgreSQL 9.6+)
+        cur.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS title TEXT")
+        cur.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS image_url TEXT")
 
         # Реакции
         cur.execute('''
@@ -98,6 +91,7 @@ def init_db():
                 UNIQUE(user_id, post_id)
             )
         ''')
+        
         # Магазин
         cur.execute('''
             CREATE TABLE IF NOT EXISTS shop_items (
@@ -112,6 +106,7 @@ def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         ''')
+        
         # Инвентарь
         cur.execute('''
             CREATE TABLE IF NOT EXISTS user_inventory (
@@ -123,8 +118,7 @@ def init_db():
                 UNIQUE(user_id, item_id)
             )
         ''')
-        conn.commit()
-
+        
         # Создаём администратора
         cur.execute("SELECT * FROM users WHERE username = 'admin'")
         admin = cur.fetchone()
@@ -134,7 +128,6 @@ def init_db():
                 "INSERT INTO users (username, password_hash, display_name, description, balance, is_admin, tilt_multiplier) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                 ('admin', hashed, 'Administrator', 'Главный администратор', 999.99, 1, 0.30)
             )
-            conn.commit()
             print("Администратор создан: admin / admin123")
 
         # Добавляем товары, если их нет
@@ -155,7 +148,10 @@ def init_db():
                     "INSERT INTO shop_items (name, description, price, category, icon, css_class, emoji) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     (name, desc, price, category, icon, css_class, emoji)
                 )
+                
+        # Один финальный коммит для всей инициализации
         conn.commit()
+        print("База данных успешно инициализирована.")
 
     except Exception as e:
         conn.rollback()
