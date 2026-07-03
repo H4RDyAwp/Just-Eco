@@ -80,8 +80,8 @@
     {% if my_posts %}
     <div style="display: flex; flex-direction: column; gap: 1rem;">
         {% for post in my_posts[:5] %}
-        <div class="post-card"
-            style="{% if post_style and post_style.css_class == 'gold-text' %}color: #ffd700;{% elif post_style and post_style.css_class == 'neon-post' %}background: linear-gradient(135deg, #ff00cc, #3333ff); color: #fff;{% endif %}">
+        <div class="post-card {% for style in post_styles %}{{ style.css_class }} {% endfor %}"
+            style="{% if post_styles|selectattr('css_class', 'equalto', 'neon-post')|list %}background: rgba(255, 0, 200, 0.08); border: 2px solid transparent; border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; animation: neonBorder 3s linear infinite; border-radius: 1.5rem;{% endif %}">
             <p style="word-wrap: break-word;">{{ post.content }}</p>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
                 <span style="color: var(--text-muted); font-size: 0.75rem;">{{ post.created_at.strftime('%Y-%m-%d

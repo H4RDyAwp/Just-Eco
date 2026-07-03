@@ -477,7 +477,7 @@ def purchase_item(user_id, item_id):
     return True, "Украшение куплено!"
 
 def toggle_equip_item(user_id, item_id):
-    """Включает/выключает украшение. В одной категории может быть активно только одно."""
+    """Включает/выключает украшение. Для постов можно включить несколько, для рамок – только одно."""
     conn = get_db_connection()
     cur = get_cursor(conn)
     item = get_item_by_id(item_id)
@@ -491,19 +491,17 @@ def toggle_equip_item(user_id, item_id):
         cur.close()
         conn.close()
         return False, "У вас нет этого украшения."
-    if inv['equipped']:
-        cur.execute("UPDATE user_inventory SET equipped = FALSE WHERE user_id = %s AND item_id = %s", (user_id, item_id))
-        conn.commit()
-        cur.close()
-        conn.close()
-        return True, "Украшение отключено."
-    # Отключаем другие активные в той же категории
-    cur.execute("UPDATE user_inventory SET equipped = FALSE WHERE user_id = %s AND item_id IN (SELECT id FROM shop_items WHERE category = %s)", (user_id, item['category']))
-    cur.execute("UPDATE user_inventory SET equipped = TRUE WHERE user_id = %s AND item_id = %s", (user_id, item_id))
+    # Если это рамка профиля, отключаем другие активные рамки
+    if item['category'] == 'profile_frame':
+        if not inv['equipped']:  # включаем новую рамку
+            cur.execute("UPDATE user_inventory SET equipped = FALSE WHERE user_id = %s AND item_id IN (SELECT id FROM shop_items WHERE category = 'profile_frame')", (user_id,))
+    # Переключаем состояние текущего украшения
+    new_equipped = not inv['equipped']
+    cur.execute("UPDATE user_inventory SET equipped = %s WHERE user_id = %s AND item_id = %s", (new_equipped, user_id, item_id))
     conn.commit()
     cur.close()
     conn.close()
-    return True, "Украшение применено!"
+    return True, "Украшение " + ("применено" if new_equipped else "отключено")
 
 # ---------- КОНТЕКСТНЫЙ ПРОЦЕССОР ----------
 @app.context_processor
@@ -617,8 +615,26 @@ def feed():
         return redirect(url_for('login'))
 
     posts = get_posts(limit=50, user_id=session['user_id'])
-    # Для каждого поста определяем, есть ли украшение у автора (можно потом расширить)
-    # Пока просто передаём список постов
+    # Получаем активные украшения для постов всех авторов
+    user_ids = set(post['user_id'] for post in posts)
+    user_styles = {}
+    if user_ids:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute('''
+            SELECT ui.user_id, si.css_class
+            FROM user_inventory ui
+            JOIN shop_items si ON ui.item_id = si.id
+            WHERE ui.user_id = ANY(%s) AND ui.equipped = TRUE AND si.category = 'post_decoration'
+        ''', (list(user_ids),))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        for row in rows:
+            user_styles.setdefault(row['user_id'], []).append(row['css_class'])
+    # Добавляем стили в каждый пост
+    for post in posts:
+        post['styles'] = user_styles.get(post['user_id'], [])
     return render_template('feed.html', posts=posts)
 
 @app.route('/create_post', methods=['GET', 'POST'])

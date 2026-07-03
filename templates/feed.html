@@ -8,7 +8,8 @@
 <div style="display: flex; flex-direction: column; gap: 1.5rem;">
     {% if posts %}
     {% for post in posts %}
-    <div class="post-card">
+    <div class="post-card {% for style in post.styles %}{{ style }} {% endfor %}"
+        style="{% if 'neon-post' in post.styles %}background: rgba(255, 0, 200, 0.08); border: 2px solid transparent; border-image: linear-gradient(45deg, #ff00cc, #3333ff, #ff00cc, #3333ff) 1; animation: neonBorder 3s linear infinite; border-radius: 1.5rem;{% endif %}">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
             <div>
                 <strong style="color: var(--text-primary);">{{ post.display_name }}</strong>
@@ -18,9 +19,10 @@
                 </span>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <span style="color: var(--text-secondary);">👍 {{ post.likes_count }}</span>
+                <span style="color: var(--text-secondary);">❤️ {{ post.likes_count }}</span>
                 <span style="color: var(--text-secondary);">👎 {{ post.dislikes_count }}</span>
 
+                <!-- Кнопка лайка -->
                 {% if post.liked %}
                 <a href="{{ url_for('like_post_route', post_id=post.id) }}" class="ctrl-btn"
                     style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; background: var(--text-primary); color: var(--bg-1);">👍</a>
@@ -29,6 +31,7 @@
                     style="width: auto; padding: 0 0.8rem; font-size: 0.7rem;">👍</a>
                 {% endif %}
 
+                <!-- Кнопка дизлайка -->
                 {% if post.disliked %}
                 <a href="{{ url_for('dislike_post_route', post_id=post.id) }}" class="ctrl-btn"
                     style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; background: var(--text-primary); color: var(--bg-1);">👎</a>
@@ -37,6 +40,7 @@
                     style="width: auto; padding: 0 0.8rem; font-size: 0.7rem;">👎</a>
                 {% endif %}
 
+                <!-- Кнопка удаления (только для автора или админа) -->
                 {% if current_user and (current_user.id == post.user_id or current_user.is_admin == 1) %}
                 <form method="POST" action="{{ url_for('delete_post_route', post_id=post.id) }}"
                     style="display: inline-block;" onsubmit="return confirm('Удалить этот пост?');">
@@ -46,7 +50,9 @@
                 {% endif %}
             </div>
         </div>
-        <p style="margin-top: 0.5rem; color: var(--text-secondary); line-height: 1.5; word-wrap: break-word;">
+        <p
+            style="margin-top: 0.5rem; line-height: 1.5; word-wrap: break-word; 
+                       {% if 'gold-text' in post.styles %}color: #ffd700 !important;{% else %}color: var(--text-secondary);{% endif %}">
             {{ post.content }}
         </p>
     </div>
