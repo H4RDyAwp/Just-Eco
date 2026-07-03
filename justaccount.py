@@ -38,6 +38,15 @@ def get_cursor(conn):
     """Возвращает курсор с доступом по имени колонки."""
     return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+# ---------- ХЕШИРОВАНИЕ ПАРОЛЕЙ ----------
+def hash_password(password):
+    salt = os.urandom(16).hex()
+    return salt + ':' + hashlib.sha256((salt + password).encode()).hexdigest()
+
+def verify_password(password, hashed):
+    salt, h = hashed.split(':')
+    return h == hashlib.sha256((salt + password).encode()).hexdigest()
+
 # ---------- ИНИЦИАЛИЗАЦИЯ БАЗЫ ----------
 def init_db():
     conn = get_db_connection()
@@ -100,15 +109,6 @@ def init_db():
         conn.close()
 
 init_db()
-
-# ---------- ХЕШИРОВАНИЕ ПАРОЛЕЙ ----------
-def hash_password(password):
-    salt = os.urandom(16).hex()
-    return salt + ':' + hashlib.sha256((salt + password).encode()).hexdigest()
-
-def verify_password(password, hashed):
-    salt, h = hashed.split(':')
-    return h == hashlib.sha256((salt + password).encode()).hexdigest()
 
 # ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
 def get_user_by_username(username):
