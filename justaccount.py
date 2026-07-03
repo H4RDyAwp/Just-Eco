@@ -76,6 +76,17 @@ def init_db():
                 dislikes_count INTEGER DEFAULT 0
             )
         ''')
+        # Добавляем колонки title и image_url, если их нет
+        try:
+            cur.execute("ALTER TABLE posts ADD COLUMN title TEXT")
+            conn.commit()
+        except psycopg2.errors.DuplicateColumn:
+            pass  # колонка уже существует
+        try:
+            cur.execute("ALTER TABLE posts ADD COLUMN image_url TEXT")
+            conn.commit()
+        except psycopg2.errors.DuplicateColumn:
+            pass  # колонка уже существует
         # Реакции
         cur.execute('''
             CREATE TABLE IF NOT EXISTS reactions (
