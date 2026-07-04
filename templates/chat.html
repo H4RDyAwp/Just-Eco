@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
 {% block title %}Чат с {{ other_user.display_name }}{% endblock %}
-{% block page_title %}Чат с {{ other_user.display_name }}{ endblock %}
+{% block page_title %}Чат с {{ other_user.display_name }}{% endblock %}
 {% block sub_title %}@{{ other_user.username }}{% endblock %}
 
 {% block content %}
-<!-- Контейнер для чата (занимает всю высоту) -->
-<div style="display: flex; flex-direction: column; height: 70vh; max-height: 600px;">
-    <!-- Область сообщений (прокручиваемая) -->
-    <div
-        style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; padding-right: 0.5rem; margin-bottom: 1rem;">
+<div style="display: flex; flex-direction: column; height: 70vh; min-height: 400px;">
+    <!-- Контейнер сообщений (прокручиваемый) -->
+    <div id="message-container"
+        style="flex: 1; overflow-y: auto; padding-right: 0.5rem; display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1rem;">
+        {% if messages %}
         {% for msg in messages %}
         <div class="post-card {% for style in msg.styles %}{{ style }} {% endfor %}"
             style="{% if msg.sender_id == session.user_id %}margin-left: auto; max-width: 70%;{% else %}margin-right: auto; max-width: 70%;{% endif %}">
@@ -27,6 +27,23 @@
             <p style="margin-top: 0.3rem; word-wrap: break-word;">{{ msg.content }}</p>
         </div>
         {% endfor %}
+        {% else %}
+        <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">Пока нет сообщений. Начните диалог!
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Поле ввода (прикреплено к низу панели) -->
+    <div
+        style="flex-shrink: 0; background: var(--glass-bg); backdrop-filter: blur(12px); border-radius: 1.5rem; padding: 0.8rem 1.2rem; border: 1px solid var(--glass-border);">
+        <form method="POST" action="{{ url_for('send_message_route', receiver_id=other_user.id) }}"
+            style="display: flex; gap: 0.8rem; align-items: flex-end;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <textarea id="content" name="content" rows="1" placeholder="Введите сообщение..." required
+                    style="min-height: 40px; max-height: 120px; resize: vertical;"></textarea>
+            </div>
+            <button type="submit" class="btn-submit" style="margin-bottom: 0; white-space: nowrap;">Отправить</button>
+        </form>
     </div>
 </div>
 
@@ -34,19 +51,14 @@
     <a href="{{ url_for('inbox') }}" class="ctrl-btn theme-btn" style="text-decoration: none; padding: 0.5rem 1.2rem;">←
         Назад к диалогам</a>
 </div>
-{% endblock %}
 
-<!-- ===== ОТДЕЛЬНЫЙ БЛОК С ОТПРАВКОЙ СООБЩЕНИЙ (ЗАКРЕПЛЁН СНИЗУ) ===== -->
-{% block extra_footer %}
-<div
-    style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 1000; width: 100%; max-width: 1000px; padding: 0.8rem 1.5rem; background: var(--glass-bg); backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); border-top: 1px solid var(--glass-border); box-shadow: 0 -8px 32px rgba(0,0,0,0.2); border-radius: 1.5rem 1.5rem 0 0;">
-    <form method="POST" action="{{ url_for('send_message_route', receiver_id=other_user.id) }}"
-        style="display: flex; gap: 0.5rem; align-items: flex-end;">
-        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-            <textarea id="content" name="content" rows="2" placeholder="Введите сообщение..." required
-                style="min-height: 50px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 1rem; padding: 0.7rem 1rem; color: var(--text-primary); font-family: inherit; font-size: 0.95rem; width: 100%; resize: vertical;"></textarea>
-        </div>
-        <button type="submit" class="btn-submit" style="margin-bottom: 0.2rem;">Отправить</button>
-    </form>
-</div>
+<!-- Авто-прокрутка вниз при загрузке и после отправки -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.getElementById('message-container');
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    });
+</script>
 {% endblock %}
