@@ -5,38 +5,42 @@
 {% block sub_title %}@{{ other_user.username }}{% endblock %}
 
 {% block content %}
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-        <!-- Окно сообщений -->
-        <div style="max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; padding-right: 0.5rem;">
-            {% for msg in messages %}
-                <div class="post-card {% for style in msg.styles %}{{ style }} {% endfor %}"
-                     style="{% if msg.sender_id == session.user_id %}margin-left: auto; max-width: 70%;{% else %}margin-right: auto; max-width: 70%;{% endif %}">
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;">
-                        <div>
-                            <strong style="color: var(--text-primary);">{{ msg.display_name }}</strong>
-                            <span style="color: var(--text-muted); font-size: 0.7rem; margin-left: 0.5rem;">
-                                {{ msg.created_at.strftime('%H:%M') }}
-                            </span>
-                        </div>
-                        {% if msg.sender_id == session.user_id %}
-                            <span style="color: var(--text-muted); font-size: 0.6rem;">Вы</span>
-                        {% endif %}
-                    </div>
-                    <p style="margin-top: 0.3rem; word-wrap: break-word;">{{ msg.content }}</p>
+<div style="display: flex; flex-direction: column; height: 70vh; max-height: 600px;">
+    <!-- Окно сообщений с прокруткой -->
+    <div
+        style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; padding-right: 0.5rem; margin-bottom: 1rem;">
+        {% for msg in messages %}
+        <div class="post-card {% for style in msg.styles %}{{ style }} {% endfor %}"
+            style="{% if msg.sender_id == session.user_id %}margin-left: auto; max-width: 70%;{% else %}margin-right: auto; max-width: 70%;{% endif %}">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;">
+                <div>
+                    <strong style="color: var(--text-primary);">{{ msg.display_name }}</strong>
+                    <span style="color: var(--text-muted); font-size: 0.7rem; margin-left: 0.5rem;">
+                        {{ msg.created_at.strftime('%H:%M') }}
+                    </span>
                 </div>
-            {% endfor %}
-        </div>
-
-        <!-- Форма отправки -->
-        <form method="POST" action="{{ url_for('send_message_route', receiver_id=other_user.id) }}" style="display: flex; gap: 0.5rem; align-items: flex-end;">
-            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                <textarea id="content" name="content" rows="2" placeholder="Введите сообщение..." required style="min-height: 60px;"></textarea>
+                {% if msg.sender_id == session.user_id %}
+                <span style="color: var(--text-muted); font-size: 0.6rem;">Вы</span>
+                {% endif %}
             </div>
-            <button type="submit" class="btn-submit" style="margin-bottom: 0.2rem;">Отправить</button>
-        </form>
+            <p style="margin-top: 0.3rem; word-wrap: break-word;">{{ msg.content }}</p>
+        </div>
+        {% endfor %}
     </div>
 
-    <div style="margin-top: 1.5rem;">
-        <a href="{{ url_for('inbox') }}" class="ctrl-btn theme-btn" style="text-decoration: none; padding: 0.5rem 1.2rem;">← Назад к диалогам</a>
-    </div>
+    <!-- Форма отправки (приклеена к низу) -->
+    <form method="POST" action="{{ url_for('send_message_route', receiver_id=other_user.id) }}"
+        style="display: flex; gap: 0.5rem; align-items: flex-end; flex-shrink: 0;">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <textarea id="content" name="content" rows="2" placeholder="Введите сообщение..." required
+                style="min-height: 60px;"></textarea>
+        </div>
+        <button type="submit" class="btn-submit" style="margin-bottom: 0.2rem;">Отправить</button>
+    </form>
+</div>
+
+<div style="margin-top: 1.5rem;">
+    <a href="{{ url_for('inbox') }}" class="ctrl-btn theme-btn" style="text-decoration: none; padding: 0.5rem 1.2rem;">←
+        Назад к диалогам</a>
+</div>
 {% endblock %}
