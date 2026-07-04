@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Сообщения{% endblock %}
+{% block page_title %}Сообщения{% endblock %}
+{% block sub_title %}Ваши диалоги{% endblock %}
+
+{% block content %}
+    {% if conversations %}
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for conv in conversations %}
+                <a href="{{ url_for('chat', user_id=conv.other_user_id) }}" style="text-decoration: none; color: inherit;">
+                    <div class="post-card" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: var(--text-primary);">{{ conv.display_name }}</strong>
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">@{{ conv.username }}</span>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.2rem;">{{ conv.last_message[:50] }}{% if conv.last_message|length > 50 %}...{% endif %}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="color: var(--text-muted); font-size: 0.7rem;">{{ conv.last_message_time.strftime('%d.%m.%Y %H:%M') }}</span>
+                            {% if not conv.is_read and conv.last_sender_id != session.user_id %}
+                                <span style="display: inline-block; width: 10px; height: 10px; background: #4ade80; border-radius: 50%; margin-left: 0.5rem;"></span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">У вас пока нет диалогов.</p>
+    {% endif %}
+{% endblock %}

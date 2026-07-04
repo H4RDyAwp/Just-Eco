@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
 
-# ---------- ХЕШИРОВАНИЕ ----------
+# ---------- ХЕШИРОВАНИЕ ПАРОЛЕЙ ----------
 def hash_password(password):
     salt = os.urandom(16).hex()
     return salt + ':' + hashlib.sha256((salt + password).encode()).hexdigest()
@@ -23,7 +23,7 @@ def verify_password(password, hashed):
     salt, h = hashed.split(':')
     return h == hashlib.sha256((salt + password).encode()).hexdigest()
 
-# ---------- ПОДКЛЮЧЕНИЕ К БАЗЕ ----------
+# ---------- ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ ----------
 def get_db_connection():
     database_url = os.getenv('DATABASE_URL')
     if database_url:
@@ -43,11 +43,12 @@ def get_db_connection():
 def get_cursor(conn):
     return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+# ---------- ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ----------
 def init_db():
+    # Создание таблиц (безопасно, каждая команда в отдельной транзакции)
     conn = get_db_connection()
     cur = get_cursor(conn)
     try:
-        # Пользователи
         cur.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -62,8 +63,6 @@ def init_db():
                 last_reward_time DOUBLE PRECISION
             )
         ''')
-        
-        # Посты (с заголовком и картинкой)
         cur.execute('''
             CREATE TABLE IF NOT EXISTS posts (
                 id SERIAL PRIMARY KEY,
@@ -76,12 +75,6 @@ def init_db():
                 dislikes_count INTEGER DEFAULT 0
             )
         ''')
-        
-        # БЕЗОПАСНОЕ добавление колонок (работает в PostgreSQL 9.6+)
-        cur.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS title TEXT")
-        cur.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS image_url TEXT")
-
-        # Реакции
         cur.execute('''
             CREATE TABLE IF NOT EXISTS reactions (
                 id SERIAL PRIMARY KEY,
@@ -91,8 +84,6 @@ def init_db():
                 UNIQUE(user_id, post_id)
             )
         ''')
-        
-        # Магазин
         cur.execute('''
             CREATE TABLE IF NOT EXISTS shop_items (
                 id SERIAL PRIMARY KEY,
@@ -106,8 +97,6 @@ def init_db():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         ''')
-        
-        # Инвентарь
         cur.execute('''
             CREATE TABLE IF NOT EXISTS user_inventory (
                 id SERIAL PRIMARY KEY,
@@ -118,19 +107,52 @@ def init_db():
                 UNIQUE(user_id, item_id)
             )
         ''')
-        
-        # Создаём администратора
-        cur.execute("SELECT * FROM users WHERE username = 'admin'")
-        admin = cur.fetchone()
-        if not admin:
-            hashed = hash_password('admin123')
-            cur.execute(
-                "INSERT INTO users (username, password_hash, display_name, description, balance, is_admin, tilt_multiplier) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                ('admin', hashed, 'Administrator', 'Главный администратор', 999.99, 1, 0.30)
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                is_read BOOLEAN DEFAULT FALSE,
+                reply_to_id INTEGER REFERENCES messages(id) ON DELETE SET NULL
             )
-            print("Администратор создан: admin / admin123")
+        ''')
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Ошибка создания таблиц: {e}")
+    finally:
+        cur.close()
+        conn.close()
 
-        # Добавляем товары, если их нет
+    # Добавляем колонки, если их нет (для обновления существующей БД)
+    for alter_sql in [
+        "ALTER TABLE posts ADD COLUMN title TEXT",
+        "ALTER TABLE posts ADD COLUMN image_url TEXT"
+    ]:
+        try:
+            conn = get_db_connection()
+            cur = get_cursor(conn)
+            cur.execute(alter_sql)
+            conn.commit()
+            cur.close()
+            conn.close()
+        except psycopg2.errors.DuplicateColumn:
+            pass
+        except Exception as e:
+            print(f"Ошибка добавления колонки: {e}")
+            if conn:
+                conn.rollback()
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+
+    # Добавляем товары, если их нет
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
         items = [
             ('Золотой текст', 'Золотистый цвет текста в постах', 5.00, 'post_decoration', '🌟', 'gold-text', None),
             ('Неоновый пост', 'Переливающаяся обводка и лёгкий фон', 7.00, 'post_decoration', '💡', 'neon-post', None),
@@ -140,7 +162,6 @@ def init_db():
             ('Matrix Background', 'Анимированный фон в стиле Матрицы', 12.00, 'post_decoration', '💻', 'matrix-bg', None),
             ('Green Text', 'Неоновый зелёный текст', 5.50, 'post_decoration', '🌿', 'green-text', None),
         ]
-
         for name, desc, price, category, icon, css_class, emoji in items:
             cur.execute("SELECT id FROM shop_items WHERE css_class = %s", (css_class,))
             if not cur.fetchone():
@@ -148,14 +169,30 @@ def init_db():
                     "INSERT INTO shop_items (name, description, price, category, icon, css_class, emoji) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     (name, desc, price, category, icon, css_class, emoji)
                 )
-                
-        # Один финальный коммит для всей инициализации
         conn.commit()
-        print("База данных успешно инициализирована.")
-
     except Exception as e:
         conn.rollback()
-        print(f"Ошибка инициализации БД: {e}")
+        print(f"Ошибка добавления товаров: {e}")
+    finally:
+        cur.close()
+        conn.close()
+
+    # Создаём администратора
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    try:
+        cur.execute("SELECT * FROM users WHERE username = 'admin'")
+        if not cur.fetchone():
+            hashed = hash_password('admin123')
+            cur.execute(
+                "INSERT INTO users (username, password_hash, display_name, description, balance, is_admin, tilt_multiplier) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                ('admin', hashed, 'Administrator', 'Главный администратор', 999.99, 1, 0.30)
+            )
+            conn.commit()
+            print("Администратор создан: admin / admin123")
+    except Exception as e:
+        conn.rollback()
+        print(f"Ошибка создания администратора: {e}")
     finally:
         cur.close()
         conn.close()
@@ -336,7 +373,7 @@ def delete_post(post_id, user_id, is_admin):
     conn.close()
     return False
 
-# ---------- НАГРАДЫ ----------
+# ---------- НАГРАДЫ (КВЕСТЫ) ----------
 def get_last_reward_time(user_id):
     conn = get_db_connection()
     cur = get_cursor(conn)
@@ -516,6 +553,72 @@ def toggle_equip_item(user_id, item_id):
     conn.close()
     return True, "Украшение " + ("применено" if new_equipped else "отключено")
 
+# ---------- ЛИЧНЫЕ СООБЩЕНИЯ ----------
+def get_conversations(user_id):
+    """Возвращает список диалогов пользователя с последними сообщениями."""
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute('''
+        SELECT DISTINCT ON (other_user_id) 
+            CASE WHEN sender_id = %s THEN receiver_id ELSE sender_id END AS other_user_id,
+            u.display_name, u.username,
+            m.content AS last_message,
+            m.created_at AS last_message_time,
+            m.is_read,
+            m.sender_id AS last_sender_id
+        FROM messages m
+        JOIN users u ON (CASE WHEN sender_id = %s THEN receiver_id ELSE sender_id END) = u.id
+        WHERE sender_id = %s OR receiver_id = %s
+        ORDER BY other_user_id, m.created_at DESC
+    ''', (user_id, user_id, user_id, user_id))
+    conversations = cur.fetchall()
+    cur.close()
+    conn.close()
+    return conversations
+
+def get_messages(user_id, other_user_id, limit=50):
+    """Возвращает последние сообщения между двумя пользователями."""
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute('''
+        SELECT m.*, u.display_name, u.username
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE (sender_id = %s AND receiver_id = %s)
+           OR (sender_id = %s AND receiver_id = %s)
+        ORDER BY m.created_at DESC
+        LIMIT %s
+    ''', (user_id, other_user_id, other_user_id, user_id, limit))
+    messages = cur.fetchall()
+    cur.close()
+    conn.close()
+    return messages[::-1]  # переворачиваем в хронологическом порядке
+
+def send_message(sender_id, receiver_id, content):
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute(
+        "INSERT INTO messages (sender_id, receiver_id, content) VALUES (%s, %s, %s)",
+        (sender_id, receiver_id, content)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def mark_as_read(message_ids, user_id):
+    """Отмечает сообщения как прочитанные для текущего пользователя."""
+    if not message_ids:
+        return
+    conn = get_db_connection()
+    cur = get_cursor(conn)
+    cur.execute(
+        "UPDATE messages SET is_read = TRUE WHERE id = ANY(%s) AND receiver_id = %s",
+        (list(message_ids), user_id)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
 # ---------- КОНТЕКСТНЫЙ ПРОЦЕССОР ----------
 @app.context_processor
 def inject_user():
@@ -524,7 +627,7 @@ def inject_user():
         return dict(current_user=user)
     return dict(current_user=None)
 
-# ---------- ДЕКОРАТОР ----------
+# ---------- ДЕКОРАТОР ДЛЯ АДМИНОВ ----------
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -612,12 +715,10 @@ def dashboard():
     my_posts = get_user_posts(user['id'], current_user_id=session['user_id'])
     stats = get_user_stats(user['id'])
 
-    # Активные украшения для постов и рамка профиля
     post_styles = get_equipped_items(user['id'], 'post_decoration')
     profile_frame = get_equipped_items(user['id'], 'profile_frame')
     frame = profile_frame[0] if profile_frame else None
-    post_styles = get_equipped_items(user['id'], 'post_decoration')
-    print("ACTIVE STYLES:", post_styles)  # <-- добавьте эту строку
+
     return render_template('dashboard.html',
                            user=user,
                            total_users=total_users,
@@ -633,7 +734,6 @@ def feed():
         return redirect(url_for('login'))
 
     posts = get_posts(limit=50, user_id=session['user_id'])
-    # Получаем активные украшения для всех авторов
     user_ids = set(post['user_id'] for post in posts)
     user_styles = {}
     if user_ids:
@@ -778,7 +878,6 @@ def user_profile(user_id):
         return redirect(url_for('users'))
     posts = get_user_posts(user_id, current_user_id=session['user_id'])
     stats = get_user_stats(user_id)
-    # Украшения пользователя
     post_styles = get_equipped_items(user_id, 'post_decoration')
     profile_frame = get_equipped_items(user_id, 'profile_frame')
     frame = profile_frame[0] if profile_frame else None
@@ -828,6 +927,67 @@ def send_money(user_id):
 
     flash(f'Вы отправили ${amount:.2f} пользователю {receiver["display_name"]}.', 'success')
     return redirect(url_for('user_profile', user_id=user_id))
+
+# ---------- ЛИЧНЫЕ СООБЩЕНИЯ (маршруты) ----------
+@app.route('/inbox')
+def inbox():
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    conversations = get_conversations(user_id)
+    return render_template('inbox.html', conversations=conversations)
+
+@app.route('/messages/<int:user_id>')
+def chat(user_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    current_user_id = session['user_id']
+    other_user = get_user_by_id(user_id)
+    if not other_user:
+        flash('Пользователь не найден.', 'error')
+        return redirect(url_for('inbox'))
+
+    messages = get_messages(current_user_id, user_id)
+    # Отмечаем входящие сообщения как прочитанные
+    unread_ids = [msg['id'] for msg in messages if msg['receiver_id'] == current_user_id and not msg['is_read']]
+    if unread_ids:
+        mark_as_read(unread_ids, current_user_id)
+
+    # Получаем украшения для каждого сообщения
+    user_ids = set(msg['sender_id'] for msg in messages)
+    user_styles = {}
+    if user_ids:
+        conn = get_db_connection()
+        cur = get_cursor(conn)
+        cur.execute('''
+            SELECT ui.user_id, si.css_class
+            FROM user_inventory ui
+            JOIN shop_items si ON ui.item_id = si.id
+            WHERE ui.user_id = ANY(%s) AND ui.equipped = TRUE AND si.category = 'post_decoration'
+        ''', (list(user_ids),))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        for row in rows:
+            user_styles.setdefault(row['user_id'], []).append(row['css_class'])
+    for msg in messages:
+        msg['styles'] = user_styles.get(msg['sender_id'], [])
+
+    return render_template('chat.html', other_user=other_user, messages=messages)
+
+@app.route('/send_message/<int:receiver_id>', methods=['POST'])
+def send_message_route(receiver_id):
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите.', 'error')
+        return redirect(url_for('login'))
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Сообщение не может быть пустым.', 'error')
+        return redirect(url_for('chat', user_id=receiver_id))
+    send_message(session['user_id'], receiver_id, content)
+    return redirect(url_for('chat', user_id=receiver_id))
 
 # ---------- МАГАЗИН ----------
 @app.route('/shop')
@@ -963,7 +1123,6 @@ def admin_panel():
 @admin_required
 def admin_posts():
     posts = get_posts(limit=100, user_id=None)
-    # Для каждого поста добавляем стили автора (для отображения в админке)
     user_ids = set(post['user_id'] for post in posts)
     user_styles = {}
     if user_ids:
@@ -1057,4 +1216,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(host="0.0.0.0",debug=False, port=10000)

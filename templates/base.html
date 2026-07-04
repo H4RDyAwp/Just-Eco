@@ -1046,15 +1046,16 @@
             <a href="{{ url_for('dashboard') }}">Дашборд</a>
             <a href="{{ url_for('feed') }}">Лента</a>
             <a href="{{ url_for('create_post_route') }}">Новый пост</a>
-            <a href="{{ url_for('quests') }}">Квесты</a>
-            <a href="{{ url_for('users') }}">Поиск</a>
-            <a href="{{ url_for('settings') }}">Настройки</a>
-            <a href="{{ url_for('shop') }}">Магазин</a>
-            <a href="{{ url_for('inventory') }}">Инвентарь</a>
+            <a href="{{ url_for('inbox') }}">Сообщения</a>
             {% if current_user and current_user.is_admin == 1 %}
             <a href="{{ url_for('admin_panel') }}">Админка</a>
             <a href="{{ url_for('admin_posts') }}">Упр. постами</a>
             {% endif %}
+            <a href="{{ url_for('quests') }}">Квесты</a>
+            <a href="{{ url_for('shop') }}">Магазин</a>
+            <a href="{{ url_for('inventory') }}">Инвентарь</a>
+            <a href="{{ url_for('settings') }}">Настройки</a>
+            <a href="{{ url_for('users') }}">Поиск</a>
             {% if session.user_id %}
             <a href="{{ url_for('logout') }}">Выйти</a>
             {% endif %}
