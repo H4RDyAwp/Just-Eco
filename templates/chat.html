@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 
 {% block title %}Чат с {{ other_user.display_name }}{% endblock %}
-{% block page_title %}Чат с {{ other_user.display_name }}{% endblock %}
+{% block page_title %}Чат с {{ other_user.display_name }}{ endblock %}
 {% block sub_title %}@{{ other_user.username }}{% endblock %}
 
 {% block content %}
-<div class="chat-container" style="display: flex; flex-direction: column; height: 60vh; min-height: 400px;">
-    <!-- Окно сообщений (прокручиваемое) -->
+<!-- Контейнер для чата (занимает всю высоту) -->
+<div style="display: flex; flex-direction: column; height: 70vh; max-height: 600px;">
+    <!-- Область сообщений (прокручиваемая) -->
     <div
         style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; padding-right: 0.5rem; margin-bottom: 1rem;">
         {% for msg in messages %}
@@ -27,20 +28,25 @@
         </div>
         {% endfor %}
     </div>
-
-    <!-- Форма отправки (прикреплена к низу) -->
-    <form method="POST" action="{{ url_for('send_message_route', receiver_id=other_user.id) }}"
-        style="display: flex; gap: 0.5rem; align-items: flex-end; flex-shrink: 0;">
-        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-            <textarea id="content" name="content" rows="2" placeholder="Введите сообщение..." required
-                style="min-height: 60px;"></textarea>
-        </div>
-        <button type="submit" class="btn-submit" style="margin-bottom: 0.2rem;">Отправить</button>
-    </form>
 </div>
 
 <div style="margin-top: 1.5rem;">
     <a href="{{ url_for('inbox') }}" class="ctrl-btn theme-btn" style="text-decoration: none; padding: 0.5rem 1.2rem;">←
         Назад к диалогам</a>
+</div>
+{% endblock %}
+
+<!-- ===== ОТДЕЛЬНЫЙ БЛОК С ОТПРАВКОЙ СООБЩЕНИЙ (ЗАКРЕПЛЁН СНИЗУ) ===== -->
+{% block extra_footer %}
+<div
+    style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 1000; width: 100%; max-width: 1000px; padding: 0.8rem 1.5rem; background: var(--glass-bg); backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); border-top: 1px solid var(--glass-border); box-shadow: 0 -8px 32px rgba(0,0,0,0.2); border-radius: 1.5rem 1.5rem 0 0;">
+    <form method="POST" action="{{ url_for('send_message_route', receiver_id=other_user.id) }}"
+        style="display: flex; gap: 0.5rem; align-items: flex-end;">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <textarea id="content" name="content" rows="2" placeholder="Введите сообщение..." required
+                style="min-height: 50px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 1rem; padding: 0.7rem 1rem; color: var(--text-primary); font-family: inherit; font-size: 0.95rem; width: 100%; resize: vertical;"></textarea>
+        </div>
+        <button type="submit" class="btn-submit" style="margin-bottom: 0.2rem;">Отправить</button>
+    </form>
 </div>
 {% endblock %}
