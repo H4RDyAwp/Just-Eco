@@ -16,18 +16,19 @@
 {% if results %}
 <div style="display: flex; flex-direction: column; gap: 1rem;">
     {% for u in results %}
-    <a href="{{ url_for('user_profile', user_id=u.id) }}"
-        style="text-decoration: none; color: inherit; display: block;">
-        <div class="post-card" style="display: flex; justify-content: space-between; align-items: center;">
+    <a href="{{ url_for('user_profile', user_id=u.id) }}" style="text-decoration: none; color: inherit; flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <strong style="color: var(--text-primary);">{{ u.display_name }}</strong>
                 <span style="color: var(--text-muted); font-size: 0.8rem;">@{{ u.username }}</span>
-                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.2rem;">{{ u.description or
-                    'Без описания' }}</p>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.2rem;">{{ u.description or 'Без
+                    описания' }}</p>
             </div>
             <span style="color: var(--text-muted); font-size: 0.8rem;">Баланс: ${{ "%.2f"|format(u.balance) }}</span>
         </div>
     </a>
+    <a href="{{ url_for('chat', user_id=u.id) }}" class="ctrl-btn"
+        style="width: auto; padding: 0 0.8rem; font-size: 0.7rem; text-decoration: none;">💬</a>
     {% endfor %}
 </div>
 {% else %}
